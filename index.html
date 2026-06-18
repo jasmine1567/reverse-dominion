@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Re:Verse Dominion</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header>
+    <div class="brand">Re:Verse Dominion<small>盤上掌握タクティクス</small></div>
+    <div class="wallet" id="wallet">
+      <span class="chip">👤 <b class="player-name" id="playerName" title="クリックで改名">—</b></span>
+      <span class="chip">🪙 <b id="coinAmt">0</b></span>
+      <span class="chip">💎 <b id="diamondAmt">0</b></span>
+    </div>
+  </header>
+
+  <nav id="nav">
+    <button data-view="home" class="active">ホーム</button>
+    <button data-view="gacha">ガチャ</button>
+    <button data-view="collection">所持カード</button>
+    <button data-view="deck">デッキ編成</button>
+    <button data-view="fusion">合成</button>
+    <button data-view="dungeon">ダンジョン</button>
+    <button data-view="arena">競技場</button>
+    <button data-view="ranking">ランキング</button>
+  </nav>
+
+  <main>
+    <!-- HOME -->
+    <section class="view active" id="view-home">
+      <div class="section-title"><h2>ホーム</h2><p id="homeGreeting"></p></div>
+      <div id="homeBody"></div>
+    </section>
+
+    <!-- GACHA -->
+    <section class="view" id="view-gacha">
+      <div class="section-title"><h2>ガチャ</h2><p>カードを入手して戦力を増やそう</p></div>
+      <div class="gacha-wrap">
+        <div class="gacha-banner">
+          <h3>🪙 ノーマルガチャ</h3>
+          <div class="cost">1回 100コイン / 10連 900コイン</div>
+          <div class="rates">排出: N 75% / R 20% / SR 5%（SSR・URは出ません）</div>
+          <div class="actions">
+            <button class="primary" data-gacha="normal" data-pull="1">1回引く</button>
+            <button class="primary" data-gacha="normal" data-pull="10">10連引く</button>
+          </div>
+        </div>
+        <div class="gacha-banner rare">
+          <h3>💎 レアガチャ</h3>
+          <div class="cost">1回 5ダイヤ / 10連 45ダイヤ</div>
+          <div class="rates">排出: R 60% / SR 40%。1枚以上 R以上 確定（SSR・URは出ません）</div>
+          <div class="actions">
+            <button class="gold" data-gacha="rare" data-pull="1">1回引く</button>
+            <button class="gold" data-gacha="rare" data-pull="10">10連引く</button>
+          </div>
+        </div>
+      </div>
+      <p class="muted" style="margin-top:18px">SSR・URはガチャからは出ません。<b>合成</b>でのみ入手できます。</p>
+    </section>
+
+    <!-- COLLECTION -->
+    <section class="view" id="view-collection">
+      <div class="section-title"><h2>所持カード</h2><p>不要なカードは売却してコインに</p></div>
+      <div class="toolbar">
+        <select id="colRarity">
+          <option value="">全レアリティ</option>
+          <option>N</option><option>R</option><option>SR</option><option>SSR</option><option>UR</option>
+        </select>
+        <select id="colSort">
+          <option value="rarity">レア度順</option>
+          <option value="atk">攻撃力順</option>
+          <option value="def">防御力順</option>
+          <option value="name">名前順</option>
+        </select>
+        <span class="spacer"></span>
+        <span class="muted" id="colCount"></span>
+      </div>
+      <div class="card-grid" id="collectionGrid"></div>
+    </section>
+
+    <!-- DECK -->
+    <section class="view" id="view-deck">
+      <div class="section-title"><h2>デッキ編成</h2><p>6枚を編成（試合では5枚を設置、1枚は控え）</p></div>
+      <div class="deck-slots" id="deckSlots"></div>
+      <div class="toolbar"><span class="muted">下のカードをタップで編成に追加 / 上のスロットをタップで外す</span></div>
+      <div class="card-grid" id="deckPool"></div>
+    </section>
+
+    <!-- FUSION -->
+    <section class="view" id="view-fusion">
+      <div class="section-title"><h2>合成</h2><p>ベース＋素材で強化。同名同レア×nで上位レアへ昇華（SSR/URはここでのみ入手）</p></div>
+      <div class="fusion-zone">
+        <div>
+          <div class="muted" style="margin-bottom:6px">ベースカード</div>
+          <div class="fusion-slot" id="fuseBase"><span class="muted">下から選択</span></div>
+        </div>
+        <div class="fusion-arrow">＋</div>
+        <div>
+          <div class="muted" style="margin-bottom:6px">素材カード</div>
+          <div class="fusion-slot" id="fuseMat"><span class="muted">下から選択</span></div>
+        </div>
+      </div>
+      <div class="row" style="margin-bottom:14px">
+        <button class="gold" id="fuseBtn" disabled>合成する</button>
+        <span class="muted" id="fuseHint">ベースに素材のスキルを継承させる、または同名素材を集めて昇華します。</span>
+      </div>
+      <div class="toolbar"><b>素材選択：</b><span class="muted" id="fuseMode">ベース選択中</span></div>
+      <div class="card-grid" id="fusionPool"></div>
+    </section>
+
+    <!-- DUNGEON -->
+    <section class="view" id="view-dungeon">
+      <div class="section-title"><h2>ダンジョン</h2><p>5連戦。5戦目はボス。勝利で味方化したカードを1枚入手</p></div>
+      <div class="dungeon-list" id="dungeonList"></div>
+    </section>
+
+    <!-- BATTLE -->
+    <section class="view" id="view-battle">
+      <div class="section-title"><h2 id="battleTitle">バトル</h2><p id="battleSub"></p></div>
+      <div class="battle-stage">
+        <div class="score-bar">
+          <span>あなた <span class="ally-s" id="allyScore">0</span></span>
+          <span class="turn-pill" id="turnPill">—</span>
+          <span class="spacer"></span>
+          <span>CPU <span class="enemy-s" id="enemyScore">0</span></span>
+        </div>
+        <div class="board-wrap">
+          <div class="board" id="board"></div>
+          <div class="muted" id="battleInstruct">手札からカードを選び、点滅マスに設置してください</div>
+        </div>
+        <div>
+          <div class="muted" style="margin-bottom:6px">あなたの手札（設置できるのは5枚まで）</div>
+          <div class="hand" id="hand"></div>
+        </div>
+        <div class="battle-log" id="battleLog"></div>
+        <div class="row"><button class="ghost danger" id="battleQuit">リタイア</button></div>
+      </div>
+    </section>
+
+    <!-- ARENA -->
+    <section class="view" id="view-arena">
+      <div class="section-title"><h2>競技場</h2><p>カードを登録すると、一定時間ごとに自動で防衛戦が行われ報酬が貯まる</p></div>
+      <div id="arenaBody"></div>
+    </section>
+
+    <!-- RANKING -->
+    <section class="view" id="view-ranking">
+      <div class="section-title"><h2>ダンジョン進捗ランキング</h2><p>全プレイヤー中のあなたの順位</p></div>
+      <div id="rankingBody"></div>
+    </section>
+  </main>
+
+  <div class="overlay" id="overlay"><div class="modal" id="modal"></div></div>
+  <div class="toast-wrap" id="toastWrap"></div>
+
+  <script src="js/cards.fallback.js"></script>
+  <script src="js/data.js"></script>
+  <script src="js/storage.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/gacha.js"></script>
+  <script src="js/battle.js"></script>
+  <script src="js/world.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

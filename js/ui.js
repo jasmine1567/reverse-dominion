@@ -1,0 +1,448 @@
+/* ===== ui.js : 画面描画・モーダル・トースト ===== */
+(function () {
+  const $ = (id) => document.getElementById(id);
+
+  function compassHTML(marks) {
+    const order = ["NW", "N", "NE", "W", "MID", "E", "SW", "S", "SE"];
+    return '<div class="compass">' + order.map((d) =>
+      d === "MID" ? '<span class="mid"></span>' : `<span class="${marks.includes(d) ? "on" : ""}"></span>`
+    ).join("") + "</div>";
+  }
+
+  function skillLine(card) {
+    const parts = [];
+    if (card.skill && card.skill.type !== "none") parts.push(`<b>${card.skill.name}</b>：${card.skill.desc}`);
+    else parts.push('<span class="muted">固有スキルなし</span>');
+    if (card.inheritSkill) parts.push(`<b>継承:${card.inheritSkill.name}</b>`);
+    return parts.join("<br>");
+  }
+
+  function cardHTML(card, opts = {}) {
+    const cls = ["card"];
+    if (opts.selectable) cls.push("selectable");
+    if (opts.selected) cls.push("selected");
+    if (opts.dim) cls.push("dim");
+    const qty = opts.qty ? `<div class="qty">×${opts.qty}</div>` : "";
+    const ea = Data.effAtk(card), ed = Data.effDef(card);
+    return (
+      `<div class="${cls.join(" ")}" data-rarity="${card.rarity}" ${opts.data || ""}>` +
+      `<div class="rar">${card.rarity}</div>${qty}` +
+      `<div class="art">${card.art}</div>` +
+      `<div class="nm">${card.name}</div>` +
+      compassHTML(card.marks) +
+      `<div class="stat"><span class="a">⚔${ea}</span><span class="d">🛡${ed}</span></div>` +
+      `<div class="skill">${skillLine(card)}</div>` +
+      `</div>`
+    );
+  }
+
+  const UI = {
+    cardHTML,
+
+    show(view) {
+      document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+      $("view-" + view)?.classList.add("active");
+      document.querySelectorAll("#nav button").forEach((b) =>
+        b.classList.toggle("active", b.dataset.view === view)
+      );
+      const map = {
+        home: this.renderHome, gacha: () => {}, collection: this.renderCollection,
+        deck: this.renderDeck, fusion: this.renderFusion, dungeon: this.renderDungeon,
+        arena: this.renderArena, ranking: this.renderRanking, battle: () => {},
+      };
+      (map[view] || (() => {})).call(this);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
+
+    refreshWallet() {
+      const s = Store.state;
+      $("playerName").textContent = s.player?.name || "—";
+      $("coinAmt").textContent = s.coins.toLocaleString();
+      $("diamondAmt").textContent = s.diamonds.toLocaleString();
+    },
+
+    toast(msg) {
+      const wrap = $("toastWrap");
+      const t = document.createElement("div");
+      t.className = "toast";
+      t.textContent = msg;
+      wrap.appendChild(t);
+      setTimeout(() => { t.style.opacity = "0"; t.style.transition = "opacity .3s"; setTimeout(() => t.remove(), 320); }, 1900);
+    },
+
+    modal({ title, body, actions = [], noClose = false }) {
+      const m = $("modal");
+      m.innerHTML =
+        `<h3>${title}</h3><div>${body}</div>` +
+        `<div class="modal-actions">` +
+        actions.map((a, i) =>
+          `<button class="${a.primary ? "primary" : ""} ${a.danger ? "danger" : ""}" data-act="${i}">${a.label}</button>`
+        ).join("") +
+        `</div>`;
+      $("overlay").classList.add("show");
+      $("overlay")._noClose = noClose;
+      m.querySelectorAll("[data-act]").forEach((b) =>
+        (b.onclick = () => actions[+b.dataset.act].onClick())
+      );
+    },
+    closeModal() { $("overlay").classList.remove("show"); },
+
+    /* ---------- HOME ---------- */
+    renderHome() {
+      const s = Store.state;
+      $("homeGreeting").textContent = `ようこそ、${s.player?.name || "プレイヤー"} さん`;
+      const owned = s.owned.length;
+      const clears = World.DUNGEONS.filter((d) => s.dungeon[d.id]?.boss).length;
+      const rk = World.ranking(s);
+      const tile = (label, val, view, icon) =>
+        `<div class="card selectable" data-tile="${view}" style="text-align:center">
+          <div class="art">${icon}</div><div class="nm">${label}</div>
+          <div class="stat"><b style="font-size:16px">${val}</b></div></div>`;
+      $("homeBody").innerHTML = `
+        <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+          ${tile("所持カード", owned + " 枚", "collection", "🃏")}
+          ${tile("デッキ", s.deck.length + " / 6", "deck", "🎴")}
+          ${tile("ダンジョン制覇", clears + " / " + World.DUNGEONS.length, "dungeon", "🏰")}
+          ${tile("ランキング", rk.rank + " 位 / " + rk.total, "ranking", "📊")}
+        </div>
+        <div class="row" style="margin-top:22px">
+          <button class="primary" data-go="gacha">ガチャを引く</button>
+          <button data-go="dungeon">ダンジョンに挑む</button>
+          <button class="ghost" id="resetBtn">セーブをリセット</button>
+        </div>
+        <p class="muted" style="margin-top:18px">対人要素（競技場の自動対戦・全体ランキング）は本来サーバが必要なため、ここではローカルのモックで動作しています。</p>`;
+      $("homeBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => UI.show(b.dataset.go)));
+      $("homeBody").querySelectorAll("[data-tile]").forEach((b) => (b.onclick = () => UI.show(b.dataset.tile)));
+      $("resetBtn").onclick = () => UI.modal({
+        title: "セーブをリセット",
+        body: '<p class="muted">所持カード・通貨・進捗がすべて消えます。よろしいですか？</p>',
+        actions: [
+          { label: "やめる", onClick: () => UI.closeModal() },
+          { label: "リセットする", danger: true, onClick: () => { Store.reset(); UI.closeModal(); location.reload(); } },
+        ],
+      });
+    },
+
+    /* ---------- COLLECTION ---------- */
+    groups() {
+      const map = new Map();
+      Store.state.owned.forEach((inst) => {
+        const key = inst.id + "|" + (inst.inherit || "");
+        if (!map.has(key)) map.set(key, { key, id: inst.id, inherit: inst.inherit, insts: [] });
+        map.get(key).insts.push(inst);
+      });
+      return [...map.values()];
+    },
+
+    renderCollection() {
+      const grid = $("collectionGrid");
+      const rarity = $("colRarity").value;
+      const sort = $("colSort").value;
+      let groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      if (rarity) groups = groups.filter((g) => g.card.rarity === rarity);
+      groups.sort((a, b) => {
+        if (sort === "atk") return Data.effAtk(b.card) - Data.effAtk(a.card);
+        if (sort === "def") return Data.effDef(b.card) - Data.effDef(a.card);
+        if (sort === "name") return a.card.name.localeCompare(b.card.name, "ja");
+        return Data.rarityRank(b.card.rarity) - Data.rarityRank(a.card.rarity);
+      });
+      $("colCount").textContent = `所持 ${Store.state.owned.length} 枚 / ${groups.length} 種`;
+      if (groups.length === 0) { grid.innerHTML = `<div class="empty-note">カードがありません。ガチャを引いてみましょう。</div>`; return; }
+      grid.innerHTML = groups.map((g) =>
+        cardHTML(g.card, { qty: g.insts.length, selectable: true, data: `data-key="${g.key}"` })
+      ).join("");
+      grid.querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => UI.cardDetail(el.dataset.key)));
+    },
+
+    cardDetail(key) {
+      const g = this.groups().find((x) => x.key === key);
+      if (!g) return;
+      const card = Store.materialize(g.insts[0]);
+      const base = Data.byId[g.id];
+      const sell = Data.SELL_VALUE[base.rarity];
+      UI.modal({
+        title: card.name + `（${card.rarity}）`,
+        body:
+          `<div style="display:flex;gap:16px;align-items:flex-start">
+            <div style="font-size:60px">${card.art}</div>
+            <div>
+              <p>基礎 ⚔${base.baseAtk} / 🛡${base.baseDef}　実効 ⚔${Data.effAtk(card)} / 🛡${Data.effDef(card)}</p>
+              <p class="muted">マーク数 ${card.marks.length}（多いほど係数で弱くなる）</p>
+              <p>${skillLine(card)}</p>
+              <p class="muted">所持 ${g.insts.length} 枚 / 1枚売却で 🪙${sell}</p>
+            </div></div>`,
+        actions: [
+          { label: "閉じる", onClick: () => UI.closeModal() },
+          { label: `1枚売却(🪙${sell})`, onClick: () => {
+              Store.removeCard(g.insts[0].uid); Store.addCoins(sell); UI.afterChange(); UI.toast(`売却 +🪙${sell}`);
+              const still = Store.state.owned.some((o) => o.id === g.id && (o.inherit || "") === (g.inherit || ""));
+              still ? UI.cardDetail(key) : UI.closeModal();
+            } },
+          ...(g.insts.length > 1 ? [{ label: `全${g.insts.length}枚売却`, danger: true, onClick: () => {
+              const total = sell * g.insts.length; g.insts.forEach((i) => Store.removeCard(i.uid));
+              Store.addCoins(total); UI.afterChange(); UI.toast(`売却 +🪙${total}`); UI.closeModal();
+            } }] : []),
+        ],
+      });
+    },
+
+    /* ---------- DECK ---------- */
+    renderDeck() {
+      const slots = $("deckSlots");
+      slots.innerHTML = "";
+      for (let i = 0; i < 6; i++) {
+        const uid = Store.state.deck[i];
+        const el = document.createElement("div");
+        if (uid) {
+          const card = Store.resolveCard(uid);
+          el.className = "deck-slot filled";
+          el.innerHTML = `<div class="art">${card.art}</div><div>${card.name}</div><div class="muted">⚔${Data.effAtk(card)} 🛡${Data.effDef(card)}</div>`;
+          el.onclick = () => { Store.deckToggle(uid); UI.renderDeck(); };
+        } else {
+          el.className = "deck-slot";
+          el.innerHTML = `<div class="art">＋</div><div>空き</div>`;
+        }
+        slots.appendChild(el);
+      }
+      const pool = $("deckPool");
+      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      groups.sort((a, b) => Data.rarityRank(b.card.rarity) - Data.rarityRank(a.card.rarity));
+      if (groups.length === 0) { pool.innerHTML = `<div class="empty-note">カードがありません。</div>`; return; }
+      pool.innerHTML = groups.map((g) => {
+        const inDeck = g.insts.filter((i) => Store.state.deck.includes(i.uid)).length;
+        const avail = g.insts.length - inDeck;
+        return cardHTML(g.card, { qty: g.insts.length, selectable: avail > 0, dim: avail === 0, data: `data-key="${g.key}"` });
+      }).join("");
+      pool.querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
+        const g = groups.find((x) => x.key === el.dataset.key);
+        const free = g.insts.find((i) => !Store.state.deck.includes(i.uid));
+        if (!free) return;
+        const r = Store.deckToggle(free.uid);
+        if (r === "full") UI.toast("デッキは6枚までです");
+        UI.renderDeck();
+      }));
+    },
+
+    /* ---------- FUSION ---------- */
+    fuseState: { mode: "inherit", base: null, mats: [] },
+    renderFusion() {
+      const v = $("view-fusion");
+      v.innerHTML = `
+        <div class="section-title"><h2>合成</h2><p>スキル継承 / 上位レア昇華（SSR・URはここでのみ入手）</p></div>
+        <div class="toolbar">
+          <button id="fmInherit">スキル継承</button>
+          <button id="fmUpgrade">上位レア昇華</button>
+          <span class="spacer"></span><span class="muted" id="fuseDesc"></span>
+        </div>
+        <div id="fuseArea"></div>`;
+      $("fmInherit").onclick = () => { UI.fuseState = { mode: "inherit", base: null, mats: [] }; UI.renderFusion(); };
+      $("fmUpgrade").onclick = () => { UI.fuseState = { mode: "upgrade", base: null, mats: [] }; UI.renderFusion(); };
+      $("fmInherit").classList.toggle("primary", this.fuseState.mode === "inherit");
+      $("fmUpgrade").classList.toggle("primary", this.fuseState.mode === "upgrade");
+      this.fuseState.mode === "inherit" ? this.renderInherit() : this.renderUpgrade();
+    },
+
+    instById(uid) { return Store.state.owned.find((o) => o.uid === uid); },
+
+    renderInherit() {
+      $("fuseDesc").textContent = "ベースに素材の固有スキルを継承（固有スキルは不変）";
+      const fs = this.fuseState;
+      const baseCard = fs.base ? Store.resolveCard(fs.base) : null;
+      const matCard = fs.mats[0] ? Store.resolveCard(fs.mats[0]) : null;
+      const cost = 300;
+      const ready = baseCard && matCard;
+      $("fuseArea").innerHTML = `
+        <div class="fusion-zone">
+          <div><div class="muted" style="margin-bottom:6px">ベース（強化される側）</div>
+            <div class="fusion-slot">${baseCard ? cardHTML(baseCard) : '<span class="muted">下から選択</span>'}</div></div>
+          <div class="fusion-arrow">⮜ 継承</div>
+          <div><div class="muted" style="margin-bottom:6px">素材（消費・スキル提供）</div>
+            <div class="fusion-slot">${matCard ? cardHTML(matCard) : '<span class="muted">下から選択</span>'}</div></div>
+        </div>
+        <div class="row" style="margin-bottom:14px">
+          <button class="gold" id="doFuse" ${ready ? "" : "disabled"}>継承する（🪙${cost}）</button>
+          <span class="muted">${ready ? `「${baseCard.name}」に「${matCard.skill.name || "—"}」を継承` : "ベースと素材を選んでください"}</span>
+        </div>
+        <div class="toolbar"><b>${fs.base ? "素材" : "ベース"}を選択：</b><span class="muted">タップで選択</span></div>
+        <div class="card-grid" id="fusePool"></div>`;
+      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      $("fusePool").innerHTML = groups.map((g) => {
+        const used = (fs.base && g.insts.some((i) => i.uid === fs.base)) || (fs.mats[0] && g.insts.some((i) => i.uid === fs.mats[0]));
+        return cardHTML(g.card, { qty: g.insts.length, selectable: true, selected: used, data: `data-key="${g.key}"` });
+      }).join("");
+      $("fusePool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
+        const g = groups.find((x) => x.key === el.dataset.key);
+        const pick = g.insts.find((i) => i.uid !== fs.base && i.uid !== fs.mats[0]) || g.insts[0];
+        if (!fs.base) fs.base = pick.uid;
+        else if (!fs.mats[0]) { if (pick.uid === fs.base) { UI.toast("別のカードを選んでください"); return; } fs.mats[0] = pick.uid; }
+        else { fs.base = pick.uid; fs.mats = []; }
+        UI.renderInherit();
+      }));
+      const btn = $("doFuse");
+      if (btn) btn.onclick = () => {
+        if (Store.state.coins < cost) { UI.toast("コインが足りません"); return; }
+        const baseInst = this.instById(fs.base);
+        const matInst = this.instById(fs.mats[0]);
+        const matBase = Data.byId[matInst.id];
+        if (!matBase.skill || matBase.skill.type === "none") { UI.toast("素材にスキルがありません"); return; }
+        Store.spendCoins(cost);
+        baseInst.inherit = matBase.skill.id;
+        Store.removeCard(matInst.uid);
+        Store.save();
+        UI.fuseState = { mode: "inherit", base: null, mats: [] };
+        UI.afterChange();
+        UI.toast(`継承成功：${matBase.skill.name}`);
+        UI.renderFusion();
+      };
+    },
+
+    renderUpgrade() {
+      const tiers = { N: "R", R: "SR", SR: "SSR", SSR: "UR" };
+      const fs = this.fuseState;
+      $("fuseDesc").textContent = "同レアを規定数まとめて上位レアを1枚生成";
+      const baseInst = fs.base ? this.instById(fs.base) : null;
+      const baseRarity = baseInst ? Data.byId[baseInst.id].rarity : null;
+      const need = baseRarity ? Data.FUSE_UPGRADE_COUNT[baseRarity] : null;
+      const target = baseRarity ? tiers[baseRarity] : null;
+      const chosen = [fs.base, ...fs.mats].filter(Boolean);
+      const ready = baseRarity && chosen.length === need;
+      const targetPool = target ? Data.cards.filter((c) => c.rarity === target) : [];
+      $("fuseArea").innerHTML = `
+        <p class="muted">必要数：N×3 / R×3 / SR×4 → SSR / SSR×5 → UR</p>
+        <div class="row" style="margin:8px 0">
+          ${baseRarity ? `<b>${baseRarity} ${chosen.length}/${need} 枚選択中</b> → 生成: ${target}` : "<b>昇華したいレアのカードを選んでください</b>"}
+          <span class="spacer"></span>
+          <button class="ghost" id="clearSel">選択クリア</button>
+        </div>
+        ${ready ? `<div class="row" style="margin-bottom:12px"><b>生成するカードを選択：</b></div>
+          <div class="reveal-grid" id="targetPool">${targetPool.map((c) => cardHTML(Store.materialize({ id: c.id, inherit: null }), { selectable: true, data: `data-tid="${c.id}"` })).join("")}</div>`
+          : ""}
+        <div class="toolbar" style="margin-top:14px"><b>素材を選択：</b></div>
+        <div class="card-grid" id="fusePool"></div>`;
+      $("clearSel").onclick = () => { fs.base = null; fs.mats = []; UI.renderUpgrade(); };
+      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      $("fusePool").innerHTML = groups.map((g) => {
+        const selCount = g.insts.filter((i) => chosen.includes(i.uid)).length;
+        const matchRar = !baseRarity || g.card.rarity === baseRarity;
+        return cardHTML(g.card, { qty: g.insts.length, selectable: matchRar, dim: !matchRar, selected: selCount > 0, data: `data-key="${g.key}"` });
+      }).join("");
+      $("fusePool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
+        const g = groups.find((x) => x.key === el.dataset.key);
+        const r = g.card.rarity;
+        if (baseRarity && r !== baseRarity) { UI.toast("同じレアリティで揃えてください"); return; }
+        const avail = g.insts.find((i) => !chosen.includes(i.uid));
+        if (!avail) { UI.toast("これ以上選べません"); return; }
+        if (!fs.base) fs.base = avail.uid;
+        else {
+          const cap = Data.FUSE_UPGRADE_COUNT[baseRarity || r];
+          if (chosen.length >= cap) { UI.toast(`${cap}枚までです`); return; }
+          fs.mats.push(avail.uid);
+        }
+        UI.renderUpgrade();
+      }));
+      if (ready) {
+        $("targetPool").querySelectorAll("[data-tid]").forEach((el) => (el.onclick = () => {
+          const tid = el.dataset.tid;
+          chosen.forEach((uid) => Store.removeCard(uid));
+          Store.addCard(tid);
+          UI.fuseState = { mode: "upgrade", base: null, mats: [] };
+          UI.afterChange();
+          UI.toast(`昇華成功：${Data.byId[tid].name} を入手！`);
+          UI.renderFusion();
+        }));
+      }
+    },
+
+    /* ---------- DUNGEON ---------- */
+    renderDungeon() {
+      const list = $("dungeonList");
+      list.innerHTML = World.DUNGEONS.map((d) => {
+        const p = Store.state.dungeon[d.id] || { cleared: 0, boss: false };
+        const dots = [1, 2, 3, 4, 5].map((s) => {
+          const cleared = s <= p.cleared;
+          const cur = s === Math.min(p.cleared + 1, 5);
+          return `<div class="stage-dot ${cleared ? "clear" : ""} ${s === 5 ? "boss" : ""} ${cur && !cleared ? "current" : ""}">${s === 5 ? "★" : s}</div>`;
+        }).join("");
+        const pct = (p.cleared / 5) * 100;
+        return `<div class="dungeon-card">
+          <div class="lv">Lv.${d.level}</div><h3>${d.name}</h3>
+          <div class="stage-track">${dots}</div>
+          <div class="prog"><i style="width:${pct}%"></i></div>
+          <div class="row"><button class="primary" data-d="${d.id}">${p.cleared >= 5 ? "再挑戦" : "挑戦"}</button>
+          ${p.boss ? '<span class="chip">制覇済</span>' : ""}</div>
+        </div>`;
+      }).join("");
+      list.querySelectorAll("[data-d]").forEach((b) => (b.onclick = () => Battle.startDungeon(b.dataset.d)));
+    },
+
+    /* ---------- ARENA ---------- */
+    renderArena() {
+      const s = Store.state;
+      const power = World.deckPower(s);
+      const def = s.arena.defense.map((u) => Store.resolveCard(u)).filter(Boolean);
+      const logHTML = (s.arena.log || []).map((b) =>
+        `<tr><td>${b.win ? "🟦 勝利" : "🟥 敗北"}</td><td>vs ${b.opp}</td><td class="num">🪙${b.coins}${b.diamonds ? " 💎" + b.diamonds : ""}</td></tr>`
+      ).join("");
+      $("arenaBody").innerHTML = `
+        <div class="row" style="margin-bottom:14px">
+          <span class="chip">防衛戦力 <b>${power}</b></span>
+          <span class="chip">登録 <b>${def.length}/5</b></span>
+          <span class="spacer"></span>
+          <button class="gold" id="leagueBtn">本日のリーグ戦を実行</button>
+        </div>
+        <div class="deck-slots" id="arenaSlots"></div>
+        ${logHTML ? `<h3>直近の自動対戦</h3><table class="rank"><tbody>${logHTML}</tbody></table>` : '<p class="muted">カードを登録してリーグ戦を実行すると、自動対戦の結果と報酬がここに表示されます。</p>'}
+        <p class="muted" style="margin-top:16px">本来は毎日決まった時刻にサーバ側で他プレイヤーと自動対戦します。ここではローカルのモック対戦で再現しています。</p>
+        <h3 style="margin-top:20px">登録するカードを選択</h3>
+        <div class="card-grid" id="arenaPool"></div>`;
+      const slots = $("arenaSlots");
+      for (let i = 0; i < 5; i++) {
+        const uid = s.arena.defense[i];
+        const el = document.createElement("div");
+        if (uid) {
+          const c = Store.resolveCard(uid);
+          el.className = "deck-slot filled";
+          el.innerHTML = `<div class="art">${c.art}</div><div>${c.name}</div>`;
+          el.onclick = () => { s.arena.defense = s.arena.defense.filter((u) => u !== uid); Store.save(); UI.renderArena(); };
+        } else { el.className = "deck-slot"; el.innerHTML = `<div class="art">＋</div><div>空き</div>`; }
+        slots.appendChild(el);
+      }
+      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      $("arenaPool").innerHTML = groups.map((g) => {
+        const inDef = g.insts.filter((i) => s.arena.defense.includes(i.uid)).length;
+        const avail = g.insts.length - inDef;
+        return cardHTML(g.card, { qty: g.insts.length, selectable: avail > 0, dim: avail === 0, data: `data-key="${g.key}"` });
+      }).join("");
+      $("arenaPool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
+        if (s.arena.defense.length >= 5) { UI.toast("登録は5枚までです"); return; }
+        const g = groups.find((x) => x.key === el.dataset.key);
+        const free = g.insts.find((i) => !s.arena.defense.includes(i.uid));
+        if (!free) return;
+        s.arena.defense.push(free.uid); Store.save(); UI.renderArena();
+      }));
+      $("leagueBtn").onclick = () => {
+        const res = World.runLeague(s);
+        if (!res.ok) { UI.toast(res.reason); return; }
+        UI.afterChange(); UI.renderArena();
+        UI.toast(`リーグ戦完了：🪙${res.coins}${res.diamonds ? " 💎" + res.diamonds : ""}`);
+      };
+    },
+
+    /* ---------- RANKING ---------- */
+    renderRanking() {
+      const rk = World.ranking(Store.state);
+      const top = rk.rows.slice(0, 50);
+      $("rankingBody").innerHTML = `
+        <p>あなたは <b>${rk.rank}</b> 位 / 全 ${rk.total} 人　（スコア ${rk.me.score}）</p>
+        <table class="rank"><thead><tr><th>順位</th><th>プレイヤー</th><th>スコア</th><th>戦力</th></tr></thead>
+        <tbody>${top.map((r, i) =>
+          `<tr class="${r.me ? "me" : ""}"><td>${i + 1}</td><td>${r.name}${r.me ? " (あなた)" : ""}</td><td class="num">${r.score}</td><td class="num">${r.power || "-"}</td></tr>`
+        ).join("")}</tbody></table>
+        <p class="muted" style="margin-top:12px">スコアはダンジョン進捗（クリアステージ数・ボス制覇）で決まります。全プレイヤー横断ランキングは本来サーバで集計しますが、ここではモックで再現しています。</p>`;
+    },
+
+    afterChange() { this.refreshWallet(); },
+  };
+
+  window.UI = UI;
+})();
