@@ -99,6 +99,7 @@
       const isMax = level >= Data.MAX_LEVEL;
       return {
         uid: inst.uid, id: base.id, name: base.name, rarity: base.rarity, art: base.art,
+        image: base.image || null,
         baseAtk: base.baseAtk, baseDef: base.baseDef, marks, level,
         exp: inst.exp || 0, expNeed: isMax ? 0 : Data.expToNext(base.rarity, level),
         skill: base.skill, extraSkills: extras, isMax,

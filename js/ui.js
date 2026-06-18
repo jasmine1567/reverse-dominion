@@ -6,6 +6,14 @@
     return `<div class="${wrapCls}">` + (marks || []).map((d) => `<i class="amk dir-${d}"></i>`).join("") + "</div>";
   }
 
+  // SSR以上などイラスト画像が指定されたカードは画像を表示。読み込み失敗時は絵文字にフォールバック。
+  function artHTML(card, cls = "art") {
+    if (card.image) {
+      return `<div class="art-img"><img class="ci" src="${card.image}" alt="${card.name}" loading="lazy" onerror="this.closest('.art-img').classList.add('failed')"><span class="${cls} fallback">${card.art}</span></div>`;
+    }
+    return `<div class="${cls}">${card.art}</div>`;
+  }
+
   function skillLine(card) {
     const parts = [];
     if (card.skill && card.skill.type !== "none") parts.push(`<b>${card.skill.name}</b>：${card.skill.desc}`);
@@ -28,7 +36,7 @@
       (opts.noMarks ? "" : marksHTML(card.marks)) +
       `<div class="card-top"><span class="rar">${card.rarity}</span><span class="card-lv">${lv}</span></div>` +
       qty +
-      `<div class="card-art-frame"><div class="art">${card.art}</div></div>` +
+      `<div class="card-art-frame">${artHTML(card)}</div>` +
       `<div class="nm">${card.name}</div>` +
       `<div class="stat"><span class="a">⚔${ea}</span><span class="d">🛡${ed}</span></div>` +
       (opts.mini ? "" : `<div class="skill">${skillLine(card)}</div>`) +
@@ -37,7 +45,7 @@
   }
 
   const UI = {
-    cardHTML, marksHTML, skillLine,
+    cardHTML, marksHTML, skillLine, artHTML,
 
     show(view) {
       document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
@@ -189,7 +197,7 @@
               UI.show("fusion");
             } }] : []),
           { label: `1枚売却(🪙${sell})`, onClick: () => {
-              Store.removeCard(inst.uid); Store.addCoins(sell); UI.afterChange(); UI.refreshView(); UI.toast(`売却 +🪙${sell}`);
+              Store.removeCard(inst.uid); Store.addCoins(sell); if (window.Quest) Quest.bump("sell"); UI.afterChange(); UI.refreshView(); UI.toast(`売却 +🪙${sell}`);
               const ng = UI.groups().find((x) => x.key === key); ng ? UI.cardDetail(key) : UI.closeModal();
             } },
         ],
@@ -378,9 +386,10 @@
       }));
       const btn = $("doEnhance");
       if (btn) btn.onclick = () => {
+        const usedItems = Object.values(fs.items || {}).some((v) => v > 0);
         const r = Store.feedExp(fs.base, fs.mats.slice(), { ...fs.items });
         if (!r.ok) { UI.toast(r.reason); return; }
-        if (window.Quest && r.levels > 0) Quest.bump("levelup", r.levels);
+        if (window.Quest) { if (r.levels > 0) Quest.bump("levelup", r.levels); if (usedItems) Quest.bump("enhance_item"); }
         const baseUid = fs.base;
         UI.fuseState = { mode: "enhance", base: Store.getInstance(baseUid) ? baseUid : null, mats: [], items: {} };
         UI.afterChange();
@@ -561,6 +570,7 @@
       $("leagueBtn").onclick = () => {
         const res = World.runLeague(s);
         if (!res.ok) { UI.toast(res.reason); return; }
+        if (window.Quest) Quest.bump("arena");
         UI.afterChange(); UI.renderArena();
         UI.toast(`リーグ戦完了：🪙${res.coins}${res.diamonds ? " 💎" + res.diamonds : ""}`);
       };
@@ -587,6 +597,7 @@
         return `<div class="quest-section"><h3>${title} <span class="muted" style="font-weight:400">${sub}</span></h3>${rows}</div>`;
       };
       $("questBody").innerHTML =
+        section("🔰 序盤ミッション", "ゲームに慣れながら報酬ゲット", Quest.list("start")) +
         section("デイリー", "毎日0時にリセット", Quest.list("daily")) +
         section("ウィークリー", "毎週リセット", Quest.list("weekly")) +
         section("実績", "一度だけ達成できます", Quest.list("achievement"));

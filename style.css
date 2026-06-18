@@ -543,3 +543,23 @@ table.rank td.num { font-variant-numeric: tabular-nums; text-align: right; }
 .q-badge { font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 999px; }
 .q-badge.go { background: var(--gold); color: #2a1700; }
 .q-badge.ok { background: var(--ink); color: var(--text-dim); border: 1px solid var(--line); }
+
+/* ============================================================
+   v5: SSR以上の専用イラスト
+   ============================================================ */
+.card .card-art-frame { padding: 0; overflow: hidden; }
+.card .card-art-frame > .art { padding: 16px 0; }            /* 絵文字時の余白 */
+.art-img { position: relative; width: 100%; aspect-ratio: 1 / 1; }
+.art-img .ci { width: 100%; height: 100%; object-fit: cover; display: block; }
+.art-img .fallback { display: none; }
+.art-img.failed .ci { display: none; }
+.art-img.failed .fallback { display: flex; align-items: center; justify-content: center; aspect-ratio: 1/1; font-size: 42px; }
+.card.mini .art-img.failed .fallback { font-size: 26px; }
+
+/* 盤上カードのイラスト */
+.bcard .art-img { aspect-ratio: 1/1; border-radius: 6px; overflow: hidden; }
+.bcard .art-img .ci { width: 100%; height: 100%; object-fit: cover; }
+.bcard .art-img.failed .fallback { font-size: 22px; }
+
+/* ガチャ演出の大きいイラスト */
+.gacha-stage .reveal-card .card .card-art-frame .art-img { aspect-ratio: 1/1; }

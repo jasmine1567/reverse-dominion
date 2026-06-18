@@ -10,7 +10,7 @@
     return (
       `<div class="bcard ${cell.owner}">` +
       UI.marksHTML(c.marks, "bcard-marks") +
-      `<div class="bart">${c.art}</div>` +
+      UI.artHTML(c, "bart") +
       `<div class="bname">${c.name}</div>` +
       `<div class="bstat">⚔${Data.effAtk(c)} 🛡${Data.effDef(c)}</div>` +
       `</div>`

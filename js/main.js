@@ -138,7 +138,7 @@
     const res = Gacha.pull(type, count);
     if (!res.ok) { UI.toast(res.reason); return; }
     UI.refreshWallet();
-    if (window.Quest) Quest.bump("gacha");
+    if (window.Quest) { Quest.bump("gacha"); if (type === "rare") Quest.bump("rare_gacha"); }
     gachaReveal(type, res);
   }
 
