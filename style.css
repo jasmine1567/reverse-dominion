@@ -563,3 +563,146 @@ table.rank td.num { font-variant-numeric: tabular-nums; text-align: right; }
 
 /* ガチャ演出の大きいイラスト */
 .gacha-stage .reveal-card .card .card-art-frame .art-img { aspect-ratio: 1/1; }
+
+/* ============================================================
+   v6: レア度フレーム（アップロードデザイン採用）
+   ============================================================ */
+@keyframes frspin { to { transform: translate(-50%, -50%) rotate(360deg); } }
+@keyframes frholo { to { transform: rotate(360deg); } }
+@keyframes frsweep { 0% { transform: translateX(-130%) skewX(-18deg); } 60%, 100% { transform: translateX(280%) skewX(-18deg); } }
+
+.card.framed {
+  padding: 5px; border-radius: 14px; border: none; overflow: visible;
+  background: linear-gradient(150deg, #6b7079, #33363c 45%, #565a62);
+  box-shadow: 0 10px 26px rgba(0,0,0,.5);
+}
+.card.framed.dim { opacity: 0.45; }
+.card.framed.selected { outline: 2px solid var(--cyan); outline-offset: 2px; }
+.card.framed[data-rarity="R"]   { background: linear-gradient(150deg,#c2cddd,#5b6b7e 45%,#9aa9bb); box-shadow: 0 10px 26px rgba(0,0,0,.5), 0 0 18px rgba(150,180,210,.22); }
+.card.framed[data-rarity="SR"]  { background: linear-gradient(150deg,#e6c074,#7a5a28 45%,#d4ab57); box-shadow: 0 10px 26px rgba(0,0,0,.5), 0 0 20px rgba(200,160,80,.3); }
+.card.framed[data-rarity="SSR"] { background: linear-gradient(150deg,#f4d27a,#1a1a1f 38%,#caa24a 62%,#0e0e12); box-shadow: 0 12px 30px rgba(0,0,0,.6), 0 0 26px rgba(60,200,230,.3), 0 0 16px rgba(200,160,80,.3); --fr-corner-c: #f3d27c; }
+.card.framed[data-rarity="UR"]  { background: conic-gradient(from 0deg,#f5d27a,#e89ad0,#9ad8f0,#a8f0c0,#f5d27a); box-shadow: 0 12px 34px rgba(0,0,0,.62), 0 0 30px rgba(70,210,235,.4), 0 0 20px rgba(232,154,208,.35); --fr-corner-c: #f6e0a8; }
+
+.card.framed .card-inner {
+  position: relative; border-radius: 10px; padding: 9px; display: flex; flex-direction: column; gap: 7px; overflow: hidden;
+  background: linear-gradient(180deg,#141519,#0c0c10); border: 1px solid #2b2e34;
+}
+.card.framed[data-rarity="R"]   .card-inner { background: linear-gradient(180deg,#12151b,#0a0c10); border-color: #2f3742; }
+.card.framed[data-rarity="SR"]  .card-inner { background: linear-gradient(180deg,#15120c,#0b0a07); border-color: #3a2f18; box-shadow: inset 0 0 0 1px rgba(90,210,235,.32); }
+.card.framed[data-rarity="SSR"] .card-inner { background: linear-gradient(180deg,#160f1e,#0a070e); border-color: #4a3a52; box-shadow: inset 0 0 0 1px rgba(70,210,235,.42), inset 0 0 14px rgba(70,210,235,.16); }
+.card.framed[data-rarity="UR"]  .card-inner { background: linear-gradient(180deg,#0e1018,#07060c); border-color: #3a4a66; box-shadow: inset 0 0 0 1px rgba(70,210,235,.4); }
+.card.framed[data-rarity="SSR"] .card-inner::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 50% 38%, rgba(120,60,180,.22), transparent 60%); pointer-events:none; }
+.card.framed[data-rarity="UR"]  .card-inner::before { content:""; position:absolute; inset:0; background: radial-gradient(circle at 50% 36%, rgba(70,210,235,.2), transparent 58%), radial-gradient(circle at 30% 80%, rgba(232,154,208,.14), transparent 55%); pointer-events:none; }
+
+/* header: level orb + rarity badge + dots */
+.fr-head { display: flex; justify-content: space-between; align-items: flex-start; position: relative; z-index: 2; }
+.fr-orb {
+  width: 30px; height: 30px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-family: 'Cinzel', serif; font-weight: 700; font-size: 15px; color: #0c0c10;
+  background: radial-gradient(circle at 35% 30%, #9aa0aa, #3c3f46); border: 2px solid #b9bec7;
+  box-shadow: inset 0 1px 2px rgba(255,255,255,.4);
+}
+.card.framed[data-rarity="R"]   .fr-orb { background: radial-gradient(circle at 35% 30%,#cfe0f0,#4a5a6e); border-color: #dbe8f6; }
+.card.framed[data-rarity="SR"]  .fr-orb { background: radial-gradient(circle at 35% 30%,#f0d79a,#7a5a28); border-color: #f2dca0; }
+.card.framed[data-rarity="SSR"] .fr-orb { background: radial-gradient(circle at 35% 30%,#f6dca0,#8a6a2c); border-color: #f6e0a8; box-shadow: inset 0 1px 2px rgba(255,255,255,.6), 0 0 12px rgba(70,210,235,.3); }
+.card.framed[data-rarity="UR"]  .fr-orb { background: radial-gradient(circle at 35% 30%,#eafaff,#5aa0c0); border-color: #f6e0a8; box-shadow: inset 0 1px 2px rgba(255,255,255,.7), 0 0 14px rgba(70,210,235,.5); }
+.fr-rarwrap { display: flex; flex-direction: column; align-items: center; gap: 5px; }
+.fr-rar { padding: 2px 9px; border-radius: 5px; font-family: 'Cinzel', serif; font-weight: 800; font-size: 11px; letter-spacing: .06em; color: #10141a;
+  background: linear-gradient(180deg,#5a5e66,#33363c); border: 1px solid #797e88; color: #d2d6dc; }
+.card.framed[data-rarity="R"]   .fr-rar { background: linear-gradient(180deg,#aeb9c7,#5b6b7e); border-color: #cfe0f0; color: #10141a; }
+.card.framed[data-rarity="SR"]  .fr-rar { background: linear-gradient(180deg,#e6c074,#9a7330); border-color: #f2dca0; color: #1a1207; }
+.card.framed[data-rarity="SSR"] .fr-rar { background: linear-gradient(180deg,#f4d27a,#a87f30); border-color: #f6e0a8; color: #1a1207; box-shadow: 0 0 12px rgba(70,210,235,.3); }
+.card.framed[data-rarity="UR"]  .fr-rar { background: conic-gradient(from 0deg,#f5d27a,#e89ad0,#9ad8f0,#f5d27a); border-color: #f6e0a8; color: #1a1207; box-shadow: 0 0 16px rgba(70,210,235,.45); }
+.fr-dots { display: flex; gap: 4px; }
+.fr-dots i { width: 7px; height: 7px; transform: rotate(45deg); display: inline-block; background: #9aa0aa; }
+.card.framed[data-rarity="R"]   .fr-dots i { background: #cfe0f0; }
+.card.framed[data-rarity="SR"]  .fr-dots i { background: #f0d79a; }
+.card.framed[data-rarity="SSR"] .fr-dots i { background: #f6dca0; box-shadow: 0 0 4px rgba(246,220,160,.8); }
+.card.framed[data-rarity="UR"]  .fr-dots i { background: #eafaff; box-shadow: 0 0 6px rgba(120,220,245,.9); }
+
+/* illustration window */
+.fr-illust { position: relative; width: 100%; aspect-ratio: 1; border-radius: 6px; overflow: hidden; z-index: 2;
+  border: 2px solid #3a3d44; background: repeating-linear-gradient(45deg,#1a1b20,#1a1b20 11px,#15161a 11px,#15161a 22px);
+  display: flex; align-items: center; justify-content: center; }
+.card.framed[data-rarity="R"]   .fr-illust { border-color: #51606f; box-shadow: inset 0 0 18px rgba(150,180,210,.18); }
+.card.framed[data-rarity="SR"]  .fr-illust { border-color: #6e5526; box-shadow: inset 0 0 20px rgba(90,200,230,.16), inset 0 0 30px rgba(200,160,80,.14); }
+.card.framed[data-rarity="SSR"] .fr-illust { border-color: #8a6a2c; box-shadow: inset 0 0 26px rgba(70,210,235,.22), inset 0 0 30px rgba(120,60,180,.2); }
+.card.framed[data-rarity="UR"]  .fr-illust { border-color: #5a7a9a; box-shadow: inset 0 0 30px rgba(70,210,235,.28), inset 0 0 34px rgba(232,154,208,.16); }
+.fr-illust .cart { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 42px; line-height: 1; }
+.fr-illust .art-img { position: absolute; inset: 0; width: 100%; height: 100%; aspect-ratio: auto; }
+.fr-illust .art-img .ci { width: 100%; height: 100%; object-fit: cover; display: block; }
+.fr-illust .art-img.failed .cart, .fr-illust .art-img .fallback { font-size: 42px; }
+.fr-ring { position: absolute; left: 50%; top: 50%; border-radius: 50%; transform: translate(-50%,-50%); pointer-events: none; }
+.fr-ring.r1 { width: 118%; height: 118%; border: 1.5px solid rgba(70,210,235,.3); animation: frspin 26s linear infinite; }
+.fr-ring.r2 { width: 86%; height: 86%; border: 1px dashed rgba(246,220,160,.3); animation: frspin 34s linear infinite reverse; }
+
+/* name plate */
+.fr-name { position: relative; z-index: 2; padding: 6px 8px; border-radius: 6px; text-align: center;
+  font-family: 'Shippori Mincho B1', serif; font-weight: 800; font-size: 13px; letter-spacing: .03em;
+  background: linear-gradient(180deg,#2a2c31,#1a1b1f); border: 1px solid #3a3d44; color: #cfd3d9; }
+.card.framed[data-rarity="R"]   .fr-name { background: linear-gradient(180deg,#222b35,#161b22); border-color: #44525f; color: #dbe6f2; }
+.card.framed[data-rarity="SR"]  .fr-name { background: linear-gradient(180deg,#2a2113,#191205); border-color: #5a4622; color: #f0dca8; box-shadow: inset 0 0 14px rgba(90,200,230,.1); }
+.card.framed[data-rarity="SSR"] .fr-name { background: linear-gradient(180deg,#241733,#120b1c); border-color: #6a4f88; color: #f4e3b4; text-shadow: 0 0 12px rgba(70,210,235,.4); box-shadow: inset 0 0 18px rgba(70,210,235,.16); }
+.card.framed[data-rarity="UR"]  .fr-name { background: linear-gradient(180deg,#10202c,#0a1118); border-color: #4a7088; color: #eaf6ff; text-shadow: 0 0 14px rgba(70,210,235,.55); box-shadow: inset 0 0 20px rgba(70,210,235,.2); }
+
+/* skill */
+.fr-skill { position: relative; z-index: 2; font-size: 9.5px; line-height: 1.5; color: var(--text-dim); text-align: center; min-height: 2.4em; }
+.fr-skill b { color: var(--gold); }
+
+/* stats */
+.fr-stats { position: relative; z-index: 2; margin-top: auto; display: flex; gap: 9px; }
+.fr-stat { flex: 1; display: flex; align-items: center; gap: 7px; padding: 6px 8px; border-radius: 6px; background: linear-gradient(180deg,#1c1d22,#141418); border: 1px solid #2e3138; }
+.fr-lbl { width: 22px; height: 22px; border-radius: 5px; display: flex; align-items: center; justify-content: center; font-family: 'Shippori Mincho B1', serif; font-size: 12px; color: #cfd3d9; background: #3a3d44; }
+.fr-val { font-family: 'Cinzel', serif; font-weight: 700; font-size: 16px; color: #dfe3e9; font-variant-numeric: tabular-nums; }
+.card.framed[data-rarity="SR"]  .fr-lbl { background: linear-gradient(180deg,#7a5a28,#4a3818); color: #f0dca8; }
+.card.framed[data-rarity="SSR"] .fr-lbl { background: linear-gradient(180deg,#a87f30,#6a4f1e); color: #f4e3b4; }
+.card.framed[data-rarity="SSR"] .fr-stat, .card.framed[data-rarity="SSR"] .fr-val { color: #f6e8c4; }
+.card.framed[data-rarity="SSR"] .fr-stat { background: linear-gradient(180deg,#1a1226,#100a18); border-color: #5a4474; }
+.card.framed[data-rarity="UR"]  .fr-lbl { background: linear-gradient(180deg,#5aa0c0,#2e5e78); color: #eaf6ff; }
+.card.framed[data-rarity="UR"]  .fr-stat { background: linear-gradient(180deg,#0f1a24,#0a1018); border-color: #46708a; }
+.card.framed[data-rarity="UR"]  .fr-val { color: #f2faff; text-shadow: 0 0 10px rgba(70,210,235,.5); }
+
+/* corner brackets (SSR/UR) */
+.fr-corner { position: absolute; width: 26px; height: 26px; z-index: 6; pointer-events: none; box-shadow: 0 0 8px rgba(246,224,168,.5); }
+.fr-corner.tl { top: 3px; left: 3px; border-top: 2px solid var(--fr-corner-c); border-left: 2px solid var(--fr-corner-c); border-radius: 8px 0 0 0; }
+.fr-corner.tr { top: 3px; right: 3px; border-top: 2px solid var(--fr-corner-c); border-right: 2px solid var(--fr-corner-c); border-radius: 0 8px 0 0; }
+.fr-corner.bl { bottom: 3px; left: 3px; border-bottom: 2px solid var(--fr-corner-c); border-left: 2px solid var(--fr-corner-c); border-radius: 0 0 0 8px; }
+.fr-corner.br { bottom: 3px; right: 3px; border-bottom: 2px solid var(--fr-corner-c); border-right: 2px solid var(--fr-corner-c); border-radius: 0 0 8px 0; }
+
+/* UR holo + sweep */
+.fr-holo { position: absolute; inset: 0; border-radius: 14px; z-index: 3; pointer-events: none; mix-blend-mode: screen;
+  background: conic-gradient(from 0deg, rgba(245,210,122,0), rgba(232,154,208,.4), rgba(154,216,240,.4), rgba(168,240,192,.34), rgba(245,210,122,0));
+  animation: frholo 14s linear infinite; }
+.fr-sweep { position: absolute; top: 0; left: 0; width: 40%; height: 100%; z-index: 5; pointer-events: none;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,.16), transparent); animation: frsweep 6s ease-in-out infinite; }
+
+/* marks on top of frame */
+.card-marks { z-index: 10; }
+
+/* quantity chip */
+.card.framed .qty { position: absolute; bottom: 7px; right: 7px; top: auto; left: auto; z-index: 7;
+  font-size: 10px; background: rgba(8,10,16,.85); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; color: var(--text); }
+
+/* mini (hand) */
+.card.mini.framed { padding: 4px; border-radius: 11px; }
+.card.mini .card-inner { padding: 6px; gap: 5px; border-radius: 8px; }
+.card.mini .fr-orb { width: 22px; height: 22px; font-size: 11px; border-width: 1.5px; }
+.card.mini .fr-rar { font-size: 9px; padding: 1px 6px; }
+.card.mini .fr-rarwrap { gap: 3px; }
+.card.mini .fr-dots i { width: 5px; height: 5px; }
+.card.mini .fr-name { font-size: 10px; padding: 3px 5px; }
+.card.mini .fr-illust .cart, .card.mini .fr-illust .art-img .fallback { font-size: 24px; }
+.card.mini .fr-stats { gap: 5px; }
+.card.mini .fr-stat { padding: 3px 5px; gap: 4px; }
+.card.mini .fr-lbl { width: 16px; height: 16px; font-size: 10px; border-radius: 4px; }
+.card.mini .fr-val { font-size: 12px; }
+.card.mini .fr-corner { width: 18px; height: 18px; }
+
+/* gacha reveal large illustration */
+.gacha-stage .reveal-card .card { width: 240px; }
+.gacha-stage .fr-illust .cart, .gacha-stage .fr-illust .art-img .fallback { font-size: 64px; }
+
+/* v6: フレーム表示に合わせたグリッド幅調整 */
+.card-grid { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); }
+.reveal-grid .card { width: 150px; flex: 0 0 auto; }
+@media (max-width: 520px) { .card-grid { grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); } }

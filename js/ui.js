@@ -22,24 +22,40 @@
     return parts.join("<br>");
   }
 
+  const RARITY_DOTS = { N: 1, R: 2, SR: 3, SSR: 4, UR: 5 };
+
   function cardHTML(card, opts = {}) {
-    const cls = ["card"];
+    const cls = ["card", "framed"];
     if (opts.selectable) cls.push("selectable");
     if (opts.selected) cls.push("selected");
     if (opts.dim) cls.push("dim");
     if (opts.mini) cls.push("mini");
     const qty = opts.qty ? `<div class="qty">×${opts.qty}</div>` : "";
     const ea = Data.effAtk(card), ed = Data.effDef(card);
-    const lv = card.level >= Data.MAX_LEVEL ? "MAX" : "Lv." + card.level;
+    const lv = card.level >= Data.MAX_LEVEL ? "★" : String(card.level);
+    const dots = Array.from({ length: RARITY_DOTS[card.rarity] || 1 }, () => "<i></i>").join("");
+    const isHi = card.rarity === "SSR" || card.rarity === "UR";
+    const corners = isHi ? '<i class="fr-corner tl"></i><i class="fr-corner tr"></i><i class="fr-corner bl"></i><i class="fr-corner br"></i>' : "";
+    const holo = card.rarity === "UR" ? '<i class="fr-holo"></i>' : "";
+    const rings = (!card.image && isHi) ? '<i class="fr-ring r1"></i><i class="fr-ring r2"></i>' : "";
+    const sweep = card.rarity === "UR" ? '<i class="fr-sweep"></i>' : "";
     return (
       `<div class="${cls.join(" ")}" data-rarity="${card.rarity}" ${opts.data || ""}>` +
+      holo + corners +
       (opts.noMarks ? "" : marksHTML(card.marks)) +
-      `<div class="card-top"><span class="rar">${card.rarity}</span><span class="card-lv">${lv}</span></div>` +
-      qty +
-      `<div class="card-art-frame">${artHTML(card)}</div>` +
-      `<div class="nm">${card.name}</div>` +
-      `<div class="stat"><span class="a">⚔${ea}</span><span class="d">🛡${ed}</span></div>` +
-      (opts.mini ? "" : `<div class="skill">${skillLine(card)}</div>`) +
+      `<div class="card-inner">` + sweep +
+        `<div class="fr-head">` +
+          `<div class="fr-orb">${lv}</div>` +
+          `<div class="fr-rarwrap"><div class="fr-rar">${card.rarity}</div><div class="fr-dots">${dots}</div></div>` +
+        `</div>` +
+        `<div class="fr-illust">${rings}${artHTML(card, "cart")}</div>` +
+        `<div class="fr-name">${card.name}</div>` +
+        (opts.mini ? "" : `<div class="fr-skill">${skillLine(card)}</div>`) +
+        `<div class="fr-stats">` +
+          `<div class="fr-stat atk"><span class="fr-lbl">攻</span><span class="fr-val">${ea}</span></div>` +
+          `<div class="fr-stat def"><span class="fr-lbl">守</span><span class="fr-val">${ed}</span></div>` +
+        `</div>` +
+      `</div>` + qty +
       `</div>`
     );
   }
