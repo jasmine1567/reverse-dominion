@@ -98,7 +98,7 @@
           if (atk > defFinal) {
             flipCell(nb, owner);
             result.flips.push({ r: tr, c: tc });
-            result.converted.push({ id: nb.card.id, name: nb.card.name });
+            result.converted.push({ id: nb.card.id, name: nb.card.name, marks: (nb.card.marks||[]).slice() });
             log.push({ t: "win", msg: `${card.name}(攻${atk}) → ${nb.card.name}(防${defFinal}) 撃破・味方化` });
             converted = true;
             if (hasChain(card)) {
@@ -106,7 +106,7 @@
               if (b && !b.block && b.owner !== owner) {
                 flipCell(b, owner);
                 result.chainFlips.push({ r: r + dr * 2, c: c + dc * 2 });
-                result.converted.push({ id: b.card.id, name: b.card.name });
+                result.converted.push({ id: b.card.id, name: b.card.name, marks: (b.card.marks||[]).slice() });
                 log.push({ t: "chain", msg: `【連鎖】${b.card.name} も味方化！` });
               }
             }

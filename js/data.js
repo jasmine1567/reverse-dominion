@@ -14,6 +14,21 @@
   const LEVELUP_BASE = { N: 80, R: 150, SR: 400, SSR: 1200, UR: 3000 };
   const EXTRA_SKILL_CAP = 2;
 
+  // レベルアップに必要な経験値（level→level+1）
+  const XP_BASE = { N: 50, R: 110, SR: 240, SSR: 480, UR: 850 };
+  function expToNext(rarity, level) { return XP_BASE[rarity] * level; }
+  // カードを素材にしたとき得られる経験値
+  const CARD_XP = { N: 40, R: 120, SR: 380, SSR: 1100, UR: 3000 };
+  function cardXp(rarity) { return CARD_XP[rarity] || 40; }
+
+  // 経験値アイテム
+  const ITEMS = [
+    { id: "orb_s", name: "経験の宝珠・小", art: "🔹", xp: 150, sell: 30, rarity: "N" },
+    { id: "orb_m", name: "経験の宝珠・中", art: "🔷", xp: 600, sell: 120, rarity: "R" },
+    { id: "orb_l", name: "経験の宝珠・大", art: "💠", xp: 2400, sell: 480, rarity: "SR" },
+  ];
+  const ITEM_BY_ID = {}; ITEMS.forEach((it) => (ITEM_BY_ID[it.id] = it));
+
   function markCoef(n) { return Math.max(0.45, 1 - (n - 1) * 0.07); }
   function levelMult(level) { return 1 + ((level || 1) - 1) * 0.06; }
 
@@ -40,8 +55,10 @@
 
   const Data = {
     DIRS, ALL_DIRS, OPPOSITE, RARITY_ORDER, RARITY_NEXT, SELL_VALUE, FUSE_UPGRADE_COUNT,
-    MAX_LEVEL, EXTRA_SKILL_CAP,
+    MAX_LEVEL, EXTRA_SKILL_CAP, ITEMS,
     markCoef, levelMult, effAtk, effDef, levelUpCost, randomMarks,
+    expToNext, cardXp,
+    itemById(id) { return ITEM_BY_ID[id] || null; },
     cards: [], byId: {}, ready: false,
 
     async load() {

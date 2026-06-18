@@ -35,12 +35,14 @@
       return Store.state[cur] >= cost;
     },
 
-    pull(type, count) {
+    pull(type, count, opts = {}) {
       const cfg = COST[type];
       const cost = count >= 10 ? cfg.multi : cfg.single;
       const cur = cfg.currency;
-      if (Store.state[cur] < cost) return { ok: false, reason: "通貨が足りません" };
-      Store.state[cur] -= cost;
+      if (!opts.free) {
+        if (Store.state[cur] < cost) return { ok: false, reason: "通貨が足りません" };
+        Store.state[cur] -= cost;
+      }
 
       const results = [];
       for (let i = 0; i < count; i++) results.push(rollCard(RATES[type]));

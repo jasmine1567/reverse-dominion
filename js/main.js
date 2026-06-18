@@ -34,6 +34,7 @@
     const rs = Data.cards.filter((c) => c.rarity === "R");
     const pick = (arr, k) => Array.from({ length: k }, () => arr[Math.floor(Math.random() * arr.length)]);
     [...pick(ns, 4), ...pick(rs, 2)].forEach((c) => Store.addCard(c.id));
+    Store.addItem("orb_s", 3); Store.addItem("orb_m", 1);
     Store.save();
   }
 
@@ -114,6 +115,23 @@
     });
   }
 
+  function refreshDaily() {
+    const banner = $("dailyBanner"), btn = $("dailyGacha"), status = $("dailyStatus");
+    if (!banner) return;
+    const can = Store.canDaily();
+    banner.classList.toggle("done", !can);
+    if (btn) btn.disabled = !can;
+    if (status) status.textContent = can ? "1日1回、ノーマル10連を無料で引けます" : "本日は引き済みです。また明日どうぞ。";
+  }
+
+  function doDaily() {
+    if (!Store.canDaily()) { UI.toast("本日の無料ガチャは引き済みです"); return; }
+    const res = Gacha.pull("normal", 10, { free: true });
+    if (!res.ok) { UI.toast(res.reason); return; }
+    Store.markDaily(); refreshDaily(); UI.refreshWallet();
+    gachaReveal("normal", res);
+  }
+
   function doGacha(type, count) {
     if (!Gacha.canAfford(type, count)) { UI.toast(type === "normal" ? "コインが足りません" : "ダイヤが足りません"); return; }
     const res = Gacha.pull(type, count);
@@ -123,8 +141,9 @@
   }
 
   function wire() {
-    document.querySelectorAll("#nav button").forEach((b) => (b.onclick = () => UI.show(b.dataset.view)));
+    document.querySelectorAll("#nav button").forEach((b) => (b.onclick = () => { UI.show(b.dataset.view); if (b.dataset.view === "gacha") refreshDaily(); }));
     document.querySelectorAll("[data-gacha]").forEach((b) => (b.onclick = () => doGacha(b.dataset.gacha, +b.dataset.pull)));
+    $("dailyGacha").onclick = doDaily;
     $("playerName").onclick = () => { if (Store.state.player) openRename(); };
     $("colRarity").onchange = () => UI.renderCollection();
     $("colSort").onchange = () => UI.renderCollection();
@@ -140,7 +159,7 @@
         <p class="muted">ローカルサーバ経由で開いてください。例：<span class="kbd">python3 -m http.server</span> → <span class="kbd">http://localhost:8000</span></p></div>`;
       return;
     }
-    Store.load(); World.loadWorld(); wire(); UI.refreshWallet();
+    Store.load(); World.loadWorld(); wire(); UI.refreshWallet(); refreshDaily();
     if (!Store.state.player) openRegistration(); else UI.show("home");
   }
 

@@ -458,3 +458,61 @@ table.rank td.num { font-variant-numeric: tabular-nums; text-align: right; }
 .hand .hcard.used { opacity: 0.35; pointer-events: none; }
 .hand .hcard.active .card { outline: 2px solid var(--cyan); outline-offset: 1px; border-radius: 12px; }
 .board-wrap { position: relative; }
+
+/* ============================================================
+   v3: 矢印の視認性改善 / 上部バー / アイテム / 経験値強化
+   ============================================================ */
+/* 上部にレア・レベルを並べたバー（角の矢印と重ならない） */
+.card { padding-top: 6px; }
+.card .card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin: 16px 14px 0; position: relative; z-index: 2;
+}
+.card .rar { position: static; top: auto; left: auto; font-size: 10px; font-weight: 800; padding: 2px 7px; border-radius: 6px; letter-spacing: 0.05em; }
+.card .card-lv { position: static; top: auto; right: auto; font-size: 10px; }
+.card .qty { position: absolute; top: auto; bottom: 8px; left: 8px; right: auto; font-size: 11px; background: var(--ink); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; z-index: 5; }
+.card .card-art-frame { margin-top: 8px; }
+
+/* 矢印：大きく・高コントラスト・最前面 */
+.card-marks, .bcard-marks { z-index: 8; }
+.amk {
+  border-left-width: 7px; border-right-width: 7px; border-bottom-width: 13px;
+  border-bottom-color: #ffd86b;
+  filter: drop-shadow(0 0 1px #000) drop-shadow(0 1px 1px rgba(0,0,0,0.85));
+}
+/* 角の矢印はカード内側に確実に収める */
+.amk.dir-N  { top: 2px;  left: 50%;  transform: translateX(-50%) rotate(0deg); }
+.amk.dir-S  { bottom: 2px; left: 50%; transform: translateX(-50%) rotate(180deg); }
+.amk.dir-E  { right: 1px; top: 50%;  transform: translateY(-50%) rotate(90deg); }
+.amk.dir-W  { left: 1px;  top: 50%;  transform: translateY(-50%) rotate(-90deg); }
+.amk.dir-NE { top: 6px; right: 6px; transform: rotate(45deg); }
+.amk.dir-NW { top: 6px; left: 6px;  transform: rotate(-45deg); }
+.amk.dir-SE { bottom: 6px; right: 6px; transform: rotate(135deg); }
+.amk.dir-SW { bottom: 6px; left: 6px;  transform: rotate(-135deg); }
+.bcard.ally .amk { border-bottom-color: #aaccff; }
+.bcard.enemy .amk { border-bottom-color: #ffb3c0; }
+
+.card.mini .card-top { margin: 13px 9px 0; }
+.card.mini .amk { border-left-width: 6px; border-right-width: 6px; border-bottom-width: 10px; }
+.card.mini .amk.dir-NE { top: 4px; right: 4px; } .card.mini .amk.dir-NW { top: 4px; left: 4px; }
+.card.mini .amk.dir-SE { bottom: 4px; right: 4px; } .card.mini .amk.dir-SW { bottom: 4px; left: 4px; }
+
+/* デイリーバナー */
+.gacha-banner.daily { background: linear-gradient(120deg, #1b2a1f, #14231c); border-color: #2f5e3f; }
+.gacha-banner.daily.done { opacity: 0.6; }
+
+/* アイテム表示 */
+.item-strip { display: flex; gap: 10px; flex-wrap: wrap; margin: 8px 0 14px; }
+.item-chip { display: flex; align-items: center; gap: 8px; background: var(--ink-3); border: 1px solid var(--line); border-radius: 12px; padding: 8px 12px; cursor: pointer; user-select: none; }
+.item-chip .ico { font-size: 22px; }
+.item-chip .meta b { display: block; font-size: 13px; }
+.item-chip .meta span { font-size: 11px; color: var(--text-dim); }
+.item-chip .qn { margin-left: 4px; font-weight: 800; color: var(--gold); }
+.item-chip.sel { outline: 2px solid var(--cyan); }
+.item-chip.empty { opacity: 0.4; cursor: default; }
+.item-stepper { display: inline-flex; align-items: center; gap: 6px; margin-left: 6px; }
+.item-stepper button { padding: 0 8px; min-width: 26px; }
+
+/* 経験値バー */
+.expbar { height: 7px; border-radius: 5px; background: var(--ink); overflow: hidden; margin: 6px 0; }
+.expbar > i { display: block; height: 100%; background: linear-gradient(90deg, #46d4d8, #5bd08a); }

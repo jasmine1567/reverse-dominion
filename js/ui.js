@@ -25,8 +25,9 @@
     const lv = card.level >= Data.MAX_LEVEL ? "MAX" : "Lv." + card.level;
     return (
       `<div class="${cls.join(" ")}" data-rarity="${card.rarity}" ${opts.data || ""}>` +
-      marksHTML(card.marks) +
-      `<div class="rar">${card.rarity}</div><div class="card-lv">${lv}</div>${qty}` +
+      (opts.noMarks ? "" : marksHTML(card.marks)) +
+      `<div class="card-top"><span class="rar">${card.rarity}</span><span class="card-lv">${lv}</span></div>` +
+      qty +
       `<div class="card-art-frame"><div class="art">${card.art}</div></div>` +
       `<div class="nm">${card.name}</div>` +
       `<div class="stat"><span class="a">⚔${ea}</span><span class="d">🛡${ed}</span></div>` +
@@ -91,7 +92,7 @@
       $("homeBody").innerHTML = `
         <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
           ${tile("所持カード", owned + " 枚", "collection", "🃏")}
-          ${tile("デッキ", s.deck.length + " / 6", "deck", "🎴")}
+          ${tile("デッキ", s.deck.length + " / 5", "deck", "🎴")}
           ${tile("ダンジョン制覇", clears + " / " + World.DUNGEONS.length, "dungeon", "🏰")}
           ${tile("ランキング", rk.rank + " 位 / " + rk.total, "ranking", "📊")}
         </div>
@@ -150,8 +151,7 @@
       const base = Data.byId[g.id];
       const sell = Data.SELL_VALUE[base.rarity];
       const isMax = card.level >= Data.MAX_LEVEL;
-      const cost = isMax ? 0 : Data.levelUpCost(base.rarity, card.level);
-      const lvPct = (card.level / Data.MAX_LEVEL) * 100;
+      const expPct = isMax ? 100 : Math.min(100, (card.exp / card.expNeed) * 100);
       UI.modal({
         title: card.name + `（${card.rarity}）`,
         body:
@@ -159,7 +159,8 @@
             <div style="width:150px">${cardHTML(card)}</div>
             <div style="flex:1;min-width:200px">
               <p>レベル <b>${card.level}</b> / ${Data.MAX_LEVEL} <span class="stars">${"★".repeat(Math.min(5, Math.round(card.level / 2)))}</span></p>
-              <div class="lvbar"><i style="width:${lvPct}%"></i></div>
+              <div class="expbar"><i style="width:${expPct}%"></i></div>
+              <p class="muted">${isMax ? "MAXレベル" : `EXP ${card.exp} / ${card.expNeed}`}</p>
               <p>実効 ⚔<b>${Data.effAtk(card)}</b> / 🛡<b>${Data.effDef(card)}</b>　<span class="muted">(基礎 ${base.baseAtk}/${base.baseDef})</span></p>
               <p class="muted">攻撃マーク ${card.marks.length} 方向：${card.marks.join(" ")}（多いほど係数で弱体）</p>
               <p>${skillLine(card)}</p>
@@ -168,12 +169,10 @@
             </div></div>`,
         actions: [
           { label: "閉じる", onClick: () => UI.closeModal() },
-          ...(!isMax ? [{ label: `レベルアップ(🪙${cost})`, primary: true, onClick: () => {
-              const r = Store.levelUp(inst.uid);
-              if (!r.ok) { UI.toast(r.reason); return; }
-              UI.afterChange(); UI.toast(`Lv.${r.level} に上昇！`);
-              UI.refreshView(); const ng = UI.groups().find((x) => x.insts.some((i) => i.uid === inst.uid));
-              ng ? UI.cardDetail(ng.key) : UI.closeModal();
+          ...(!isMax ? [{ label: "強化する（経験値合成）", primary: true, onClick: () => {
+              UI.closeModal();
+              UI.fuseState = { mode: "enhance", base: inst.uid, mats: [], items: {} };
+              UI.show("fusion");
             } }] : []),
           { label: `1枚売却(🪙${sell})`, onClick: () => {
               Store.removeCard(inst.uid); Store.addCoins(sell); UI.afterChange(); UI.refreshView(); UI.toast(`売却 +🪙${sell}`);
@@ -187,7 +186,7 @@
     renderDeck() {
       const slots = $("deckSlots");
       slots.innerHTML = "";
-      for (let i = 0; i < 6; i++) {
+      for (let i = 0; i < 5; i++) {
         const uid = Store.state.deck[i];
         const el = document.createElement("div");
         if (uid) {
@@ -211,7 +210,7 @@
         const g = groups.find((x) => x.key === el.dataset.key);
         const free = g.insts.find((i) => !Store.state.deck.includes(i.uid));
         if (!free) return;
-        if (Store.deckToggle(free.uid) === "full") UI.toast("デッキは6枚までです");
+        if (Store.deckToggle(free.uid) === "full") UI.toast("デッキは5枚までです");
         UI.renderDeck();
       }));
     },
@@ -221,20 +220,104 @@
     renderFusion() {
       const v = $("view-fusion");
       v.innerHTML = `
-        <div class="section-title"><h2>合成</h2><p>スキル合成（MAXレベルのカードへ追加付与）／上位レア昇華（SSR・URはここでのみ入手）</p></div>
+        <div class="section-title"><h2>合成</h2><p>レベル強化（経験値）／スキル合成（MAXに追加付与）／上位レア昇華（SSR・URはここでのみ）</p></div>
         <div class="toolbar">
+          <button id="fmEnhance">レベル強化</button>
           <button id="fmInherit">スキル合成</button>
           <button id="fmUpgrade">上位レア昇華</button>
           <span class="spacer"></span><span class="muted" id="fuseDesc"></span>
         </div>
         <div id="fuseArea"></div>`;
+      $("fmEnhance").onclick = () => { UI.fuseState = { mode: "enhance", base: null, mats: [], items: {} }; UI.renderFusion(); };
       $("fmInherit").onclick = () => { UI.fuseState = { mode: "inherit", base: null, mats: [] }; UI.renderFusion(); };
       $("fmUpgrade").onclick = () => { UI.fuseState = { mode: "upgrade", base: null, mats: [] }; UI.renderFusion(); };
+      $("fmEnhance").classList.toggle("primary", this.fuseState.mode === "enhance");
       $("fmInherit").classList.toggle("primary", this.fuseState.mode === "inherit");
       $("fmUpgrade").classList.toggle("primary", this.fuseState.mode === "upgrade");
-      this.fuseState.mode === "inherit" ? this.renderInherit() : this.renderUpgrade();
+      const m = this.fuseState.mode;
+      m === "enhance" ? this.renderEnhance() : m === "inherit" ? this.renderInherit() : this.renderUpgrade();
     },
     instById(uid) { return Store.state.owned.find((o) => o.uid === uid); },
+
+    renderEnhance() {
+      $("fuseDesc").textContent = "ベースに素材カード・経験値アイテムを合成してレベルアップ";
+      const fs = this.fuseState;
+      if (!fs.items) fs.items = {};
+      if (!fs.mats) fs.mats = [];
+      const baseCard = fs.base ? Store.resolveCard(fs.base) : null;
+      let gain = 0;
+      fs.mats.forEach((u) => { const i = Store.getInstance(u); if (i) gain += Data.cardXp(Data.byId[i.id].rarity); });
+      for (const iid in fs.items) { const it = Data.itemById(iid); if (it) gain += it.xp * fs.items[iid]; }
+      // 予測レベル
+      let predLv = baseCard ? baseCard.level : 1, predExp = baseCard ? baseCard.exp + gain : 0;
+      if (baseCard) { const rarity = baseCard.rarity; while (predLv < Data.MAX_LEVEL && predExp >= Data.expToNext(rarity, predLv)) { predExp -= Data.expToNext(rarity, predLv); predLv++; } if (predLv >= Data.MAX_LEVEL) predExp = 0; }
+      const items = Data.ITEMS.map((it) => {
+        const have = Store.itemCount(it.id), use = fs.items[it.id] || 0;
+        return `<div class="item-chip ${have ? "" : "empty"} ${use ? "sel" : ""}" data-item="${it.id}">
+          <span class="ico">${it.art}</span>
+          <span class="meta"><b>${it.name}</b><span>+${it.xp} EXP</span></span>
+          <span class="qn">所持${have}</span>
+          <span class="item-stepper"><button data-step="-1" data-iid="${it.id}">−</button><b>${use}</b><button data-step="1" data-iid="${it.id}">＋</button></span>
+        </div>`;
+      }).join("");
+      $("fuseArea").innerHTML = `
+        <div class="fusion-zone">
+          <div><div class="muted" style="margin-bottom:6px">ベース（強化する側）</div>
+            <div class="fusion-slot">${baseCard ? cardHTML(baseCard) : '<span class="muted">下からカードを選択</span>'}</div></div>
+          <div class="fusion-arrow">＋EXP</div>
+          <div><div class="muted" style="margin-bottom:6px">獲得経験値</div>
+            <div class="fusion-slot" style="display:block">
+              <p style="font-size:24px;font-weight:900;color:var(--cyan);margin:0">+${gain} <span style="font-size:13px;color:var(--text-dim)">EXP</span></p>
+              ${baseCard ? `<p class="muted">Lv.${baseCard.level} → <b style="color:var(--gold)">Lv.${predLv}</b>${predLv >= Data.MAX_LEVEL ? "（MAX）" : ` (EXP ${predExp}/${Data.expToNext(baseCard.rarity, predLv)})`}</p>` : ""}
+            </div></div>
+        </div>
+        <div class="muted" style="margin:4px 0 4px">経験値アイテム</div>
+        <div class="item-strip">${items || '<span class="muted">アイテムなし</span>'}</div>
+        <div class="row" style="margin-bottom:12px">
+          <button class="gold" id="doEnhance" ${baseCard && gain > 0 && !baseCard.isMax ? "" : "disabled"}>強化する</button>
+          <span class="muted">${!baseCard ? "ベースを選択してください" : baseCard.isMax ? "このカードはMAXです" : gain > 0 ? "素材カード/アイテムを合成" : "素材を選んでください"}</span>
+        </div>
+        <div class="toolbar"><b>${fs.base ? "素材カード" : "ベース"}を選択：</b> <span class="muted">（素材カードは消費されます）</span></div>
+        <div class="card-grid" id="fusePool"></div>`;
+      // item steppers
+      $("fuseArea").querySelectorAll("[data-step]").forEach((b) => (b.onclick = (e) => {
+        e.stopPropagation();
+        const iid = b.dataset.iid, step = +b.dataset.step, have = Store.itemCount(iid);
+        let v = (fs.items[iid] || 0) + step;
+        v = Math.max(0, Math.min(have, v)); fs.items[iid] = v;
+        UI.renderEnhance();
+      }));
+      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      $("fusePool").innerHTML = groups.map((g) => {
+        const baseHere = fs.base && g.insts.some((i) => i.uid === fs.base);
+        const usedAsMat = g.insts.filter((i) => fs.mats.includes(i.uid)).length;
+        const selectingBase = !fs.base;
+        const dim = selectingBase && g.card.isMax;
+        return cardHTML(g.card, { qty: g.insts.length, selectable: !dim || !selectingBase, dim, selected: baseHere || usedAsMat > 0, data: `data-key="${g.key}"` });
+      }).join("");
+      $("fusePool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
+        const g = groups.find((x) => x.key === el.dataset.key);
+        if (!fs.base) {
+          if (g.card.isMax) { UI.toast("MAXのカードは強化できません"); return; }
+          fs.base = g.insts[0].uid;
+        } else {
+          const avail = g.insts.find((i) => i.uid !== fs.base && !fs.mats.includes(i.uid));
+          if (!avail) { UI.toast("選べるカードがありません"); return; }
+          fs.mats.push(avail.uid);
+        }
+        UI.renderEnhance();
+      }));
+      const btn = $("doEnhance");
+      if (btn) btn.onclick = () => {
+        const r = Store.feedExp(fs.base, fs.mats.slice(), { ...fs.items });
+        if (!r.ok) { UI.toast(r.reason); return; }
+        const baseUid = fs.base;
+        UI.fuseState = { mode: "enhance", base: Store.getInstance(baseUid) ? baseUid : null, mats: [], items: {} };
+        UI.afterChange();
+        UI.toast(r.levels > 0 ? `+${r.gained}EXP → Lv.${r.level}！` : `+${r.gained}EXP`);
+        UI.renderFusion();
+      };
+    },
 
     renderInherit() {
       $("fuseDesc").textContent = "ベースはMAXレベル必須・素材の固有スキルを追加（最大2つ）";
@@ -309,7 +392,7 @@
           <span class="spacer"></span><button class="ghost" id="clearSel">選択クリア</button>
         </div>
         ${ready ? `<div class="row" style="margin-bottom:12px"><b>生成するカードを選択：</b></div>
-          <div class="reveal-grid" id="targetPool">${targetPool.map((c) => cardHTML(Store.materialize({ id: c.id, level: 1, marks: c.marks, extraSkills: [] }), { selectable: true, data: `data-tid="${c.id}"` })).join("")}</div>` : ""}
+          <div class="reveal-grid" id="targetPool">${targetPool.map((c) => cardHTML(Store.materialize({ id: c.id, level: 1, marks: c.marks, extraSkills: [] }), { selectable: true, noMarks: true, data: `data-tid="${c.id}"` })).join("")}</div>` : ""}
         <div class="toolbar" style="margin-top:14px"><b>素材を選択：</b></div>
         <div class="card-grid" id="fusePool"></div>`;
       $("clearSel").onclick = () => { fs.base = null; fs.mats = []; UI.renderUpgrade(); };

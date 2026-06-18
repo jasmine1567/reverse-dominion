@@ -212,14 +212,23 @@
     let diamonds = 0;
     Store.addCoins(coins);
     if (stage === 5) { diamonds = d.level * 3; Store.addDiamonds(diamonds); }
+    // 経験値アイテムのドロップ
+    const items = [];
+    if (stage === 5) {
+      const big = d.level >= 4 ? "orb_l" : "orb_m";
+      Store.addItem(big, 1); items.push(big);
+    } else if (Math.random() < 0.5) {
+      const it = Math.random() < 0.2 ? "orb_m" : "orb_s";
+      Store.addItem(it, 1); items.push(it);
+    }
     Store.setDungeonProg(d.id, stage, stage === 5);
     Store.state.stats.battles++; Store.state.stats.wins++; Store.save();
 
     await showVictory();
 
     let pool = uniqueById(S.converted);
-    if (pool.length === 0) pool = S.cpuDeckBase.map((c) => ({ id: c.id, name: c.name }));
-    showReward(sc, coins, diamonds, pool, stage === 5);
+    if (pool.length === 0) pool = S.cpuDeckBase.map((c) => ({ id: c.id, name: c.name, marks: (c.marks || []).slice() }));
+    showReward(sc, coins, diamonds, items, pool, stage === 5);
   }
 
   function uniqueById(arr) {
@@ -228,27 +237,27 @@
     return out;
   }
 
-  function showReward(sc, coins, diamonds, pool, isBoss) {
-    const cardsHTML = pool.map((c) => {
-      const base = Data.byId[c.id];
-      return `<div class="card selectable" data-rarity="${base.rarity}" data-pick="${c.id}" style="width:130px">
-        <div class="rar">${base.rarity}</div>
-        <div class="card-art-frame"><div class="art">${base.art}</div></div>
-        <div class="nm">${base.name}</div>
-        <div class="stat"><span class="a">⚔${base.baseAtk}</span><span class="d">🛡${base.baseDef}</span></div></div>`;
+  function showReward(sc, coins, diamonds, items, pool, isBoss) {
+    const cardsHTML = pool.map((c, idx) => {
+      const marks = (c.marks && c.marks.length) ? c.marks : Data.byId[c.id].marks;
+      const card = Store.materialize({ id: c.id, level: 1, marks, extraSkills: [] });
+      return UI.cardHTML(card, { selectable: true, data: `data-pick="${idx}"` });
     }).join("");
+    const itemTxt = items.length ? items.map((i) => { const it = Data.itemById(i); return `${it.art}${it.name}`; }).join("・") : "";
     UI.modal({
       title: isBoss ? "🏆 ダンジョン制覇！" : `ステージ ${S.stage} クリア！`,
       body:
         `<p>スコア あなた ${sc.ally} - ${sc.enemy} CPU</p>` +
-        `<p>獲得：🪙${coins}${diamonds ? ` / 💎${diamonds}` : ""}</p>` +
-        `<p class="muted">味方にしたカードから1枚選んで入手（攻撃マークはランダムで付与されます）：</p>` +
+        `<p>獲得：🪙${coins}${diamonds ? ` / 💎${diamonds}` : ""}${itemTxt ? ` / ${itemTxt}` : ""}</p>` +
+        `<p class="muted">味方にしたカードから1枚選んで入手（表示どおりの攻撃マーク・ステータスで入手できます）：</p>` +
         `<div class="reveal-grid">${cardsHTML}</div>`,
       noClose: true, actions: [],
     });
     document.querySelectorAll("[data-pick]").forEach((el) => {
       el.onclick = () => {
-        Store.addCard(el.dataset.pick);
+        const c = pool[+el.dataset.pick];
+        const marks = (c.marks && c.marks.length) ? c.marks : Data.byId[c.id].marks;
+        Store.addCard(c.id, { marks: marks.slice() });
         UI.closeModal(); UI.refreshWallet();
         if (isBoss) { UI.toast("ダンジョン制覇！カードを入手"); UI.show("dungeon"); }
         else nextStage();

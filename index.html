@@ -37,6 +37,11 @@
     <!-- GACHA -->
     <section class="view" id="view-gacha">
       <div class="section-title"><h2>ガチャ</h2><p>カードを入手して戦力を増やそう</p></div>
+      <div class="gacha-banner daily" id="dailyBanner" style="margin-bottom:14px">
+        <h3>🎁 デイリー無料10連</h3>
+        <div class="cost" id="dailyStatus">1日1回、ノーマル10連を無料で引けます</div>
+        <div class="actions"><button class="gold" id="dailyGacha">無料で10連引く</button></div>
+      </div>
       <div class="gacha-wrap">
         <div class="gacha-banner">
           <h3>🪙 ノーマルガチャ</h3>
@@ -82,7 +87,7 @@
 
     <!-- DECK -->
     <section class="view" id="view-deck">
-      <div class="section-title"><h2>デッキ編成</h2><p>6枚を編成（試合では5枚を設置、1枚は控え）</p></div>
+      <div class="section-title"><h2>デッキ編成</h2><p>5枚を編成して試合に使用します</p></div>
       <div class="deck-slots" id="deckSlots"></div>
       <div class="toolbar"><span class="muted">下のカードをタップで編成に追加 / 上のスロットをタップで外す</span></div>
       <div class="card-grid" id="deckPool"></div>
