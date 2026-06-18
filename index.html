@@ -23,6 +23,7 @@
     <button data-view="deck">デッキ編成</button>
     <button data-view="fusion">合成</button>
     <button data-view="dungeon">ダンジョン</button>
+    <button data-view="quest">クエスト</button>
     <button data-view="arena">競技場</button>
     <button data-view="ranking">ランキング</button>
   </nav>
@@ -87,7 +88,8 @@
 
     <!-- DECK -->
     <section class="view" id="view-deck">
-      <div class="section-title"><h2>デッキ編成</h2><p>5枚を編成して試合に使用します</p></div>
+      <div class="section-title"><h2>デッキ編成</h2><p>6枚を編成（試合は5枚設置・1枚控え）。デッキ構成は最大5つまで保存できます</p></div>
+      <div id="deckPresets"></div>
       <div class="deck-slots" id="deckSlots"></div>
       <div class="toolbar"><span class="muted">下のカードをタップで編成に追加 / 上のスロットをタップで外す</span></div>
       <div class="card-grid" id="deckPool"></div>
@@ -113,6 +115,12 @@
       </div>
       <div class="toolbar"><b>素材選択：</b><span class="muted" id="fuseMode">ベース選択中</span></div>
       <div class="card-grid" id="fusionPool"></div>
+    </section>
+
+    <!-- QUEST -->
+    <section class="view" id="view-quest">
+      <div class="section-title"><h2>クエスト</h2><p>達成して報酬を受け取りましょう</p></div>
+      <div id="questBody"></div>
     </section>
 
     <!-- DUNGEON -->
@@ -163,6 +171,7 @@
   <script src="js/cards.fallback.js"></script>
   <script src="js/data.js"></script>
   <script src="js/storage.js"></script>
+  <script src="js/quests.js"></script>
   <script src="js/engine.js"></script>
   <script src="js/gacha.js"></script>
   <script src="js/battle.js"></script>

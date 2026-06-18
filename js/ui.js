@@ -46,6 +46,7 @@
       const map = {
         home: this.renderHome, gacha: () => {}, collection: this.renderCollection,
         deck: this.renderDeck, fusion: this.renderFusion, dungeon: this.renderDungeon,
+        quest: this.renderQuests,
         arena: this.renderArena, ranking: this.renderRanking, battle: () => {},
       };
       (map[view] || (() => {})).call(this);
@@ -78,6 +79,18 @@
     },
     closeModal() { $("overlay").classList.remove("show"); },
 
+    promptText(title, def, onOk) {
+      UI.modal({
+        title,
+        body: `<input type="text" id="__prompt" maxlength="20" value="${(def || "").replace(/"/g, "&quot;")}" style="width:100%" />`,
+        actions: [
+          { label: "キャンセル", onClick: () => UI.closeModal() },
+          { label: "決定", primary: true, onClick: () => { const v = $("__prompt").value.trim(); UI.closeModal(); onOk(v); } },
+        ],
+      });
+      setTimeout(() => { const i = $("__prompt"); if (i) { i.focus(); i.select(); } }, 50);
+    },
+
     /* ---------- HOME ---------- */
     renderHome() {
       const s = Store.state;
@@ -92,8 +105,9 @@
       $("homeBody").innerHTML = `
         <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
           ${tile("所持カード", owned + " 枚", "collection", "🃏")}
-          ${tile("デッキ", s.deck.length + " / 5", "deck", "🎴")}
+          ${tile("デッキ", s.deck.length + " / 6", "deck", "🎴")}
           ${tile("ダンジョン制覇", clears + " / " + World.DUNGEONS.length, "dungeon", "🏰")}
+          ${tile("クエスト", (window.Quest ? Quest.claimable() : 0) + " 件受取可", "quest", "🎯")}
           ${tile("ランキング", rk.rank + " 位 / " + rk.total, "ranking", "📊")}
         </div>
         <div class="row" style="margin-top:22px">
@@ -184,9 +198,10 @@
 
     /* ---------- DECK ---------- */
     renderDeck() {
+      this.renderDeckPresets();
       const slots = $("deckSlots");
       slots.innerHTML = "";
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < 6; i++) {
         const uid = Store.state.deck[i];
         const el = document.createElement("div");
         if (uid) {
@@ -210,8 +225,62 @@
         const g = groups.find((x) => x.key === el.dataset.key);
         const free = g.insts.find((i) => !Store.state.deck.includes(i.uid));
         if (!free) return;
-        if (Store.deckToggle(free.uid) === "full") UI.toast("デッキは5枚までです");
+        if (Store.deckToggle(free.uid) === "full") UI.toast("デッキは6枚までです");
         UI.renderDeck();
+      }));
+    },
+
+    renderDeckPresets() {
+      const host = $("deckPresets");
+      if (!host) return;
+      const decks = Store.state.savedDecks || [];
+      const slotsHTML = decks.map((p, i) => {
+        const arts = p.cards.map((u) => Store.resolveCard(u)).filter(Boolean).map((c) => c.art).join("");
+        return `<div class="preset">
+          <div class="preset-head"><b>${p.name}</b><span class="muted">${p.cards.length}枚</span></div>
+          <div class="preset-arts">${arts || "（空）"}</div>
+          <div class="preset-actions">
+            <button class="primary" data-load="${i}">編成にセット</button>
+            <button data-over="${i}">上書き保存</button>
+            <button class="ghost" data-rename="${i}">改名</button>
+            <button class="danger" data-del="${i}">削除</button>
+          </div></div>`;
+      }).join("");
+      host.innerHTML = `
+        <div class="row" style="margin-bottom:10px">
+          <span class="chip">現在の編成 <b>${Store.state.deck.length}/6</b></span>
+          <span class="chip">保存数 <b>${decks.length}/${Store.MAX_DECKS}</b></span>
+          <span class="spacer"></span>
+          <button class="gold" id="saveDeckBtn" ${decks.length >= Store.MAX_DECKS ? "disabled" : ""}>現在の編成を新規保存</button>
+        </div>
+        <div class="preset-grid">${slotsHTML || '<span class="muted">保存済みデッキはありません。編成して「新規保存」を押すと、最大5つまで保存できます。</span>'}</div>`;
+      const saveBtn = $("saveDeckBtn");
+      if (saveBtn) saveBtn.onclick = () => {
+        if (Store.state.deck.length === 0) { UI.toast("編成が空です"); return; }
+        UI.promptText("デッキ名を入力", `デッキ${decks.length + 1}`, (name) => {
+          const r = Store.saveDeckPreset(name);
+          if (!r.ok) { UI.toast(r.reason); return; }
+          if (window.Quest) Quest.bump("deck_save");
+          UI.toast("デッキを保存しました"); UI.renderDeck();
+        });
+      };
+      host.querySelectorAll("[data-load]").forEach((b) => (b.onclick = () => {
+        const r = Store.loadDeckPreset(+b.dataset.load);
+        if (!r.ok) { UI.toast(r.reason); return; }
+        UI.toast(r.dropped ? `セット（${r.dropped}枚は未所持のため除外）` : "編成にセットしました"); UI.renderDeck();
+      }));
+      host.querySelectorAll("[data-over]").forEach((b) => (b.onclick = () => {
+        const r = Store.overwriteDeckPreset(+b.dataset.over);
+        if (!r.ok) { UI.toast(r.reason); return; }
+        if (window.Quest) Quest.bump("deck_save");
+        UI.toast("上書き保存しました"); UI.renderDeck();
+      }));
+      host.querySelectorAll("[data-rename]").forEach((b) => (b.onclick = () => {
+        const i = +b.dataset.rename;
+        UI.promptText("新しいデッキ名", decks[i].name, (name) => { Store.renameDeckPreset(i, name || decks[i].name); UI.renderDeck(); });
+      }));
+      host.querySelectorAll("[data-del]").forEach((b) => (b.onclick = () => {
+        Store.deleteDeckPreset(+b.dataset.del); UI.renderDeck();
       }));
     },
 
@@ -311,6 +380,7 @@
       if (btn) btn.onclick = () => {
         const r = Store.feedExp(fs.base, fs.mats.slice(), { ...fs.items });
         if (!r.ok) { UI.toast(r.reason); return; }
+        if (window.Quest && r.levels > 0) Quest.bump("levelup", r.levels);
         const baseUid = fs.base;
         UI.fuseState = { mode: "enhance", base: Store.getInstance(baseUid) ? baseUid : null, mats: [], items: {} };
         UI.afterChange();
@@ -370,6 +440,7 @@
         if (!r.ok) { UI.toast(r.reason); return; }
         Store.spendCoins(cost); Store.removeCard(matInst.uid); Store.save();
         UI.fuseState = { mode: "inherit", base: null, mats: [] };
+        if (window.Quest) Quest.bump("fusion");
         UI.afterChange(); UI.toast(`スキル合成成功：${matBase.skill.name}`); UI.renderFusion();
       };
     },
@@ -418,6 +489,7 @@
           chosen.forEach((uid) => Store.removeCard(uid));
           Store.addCard(tid);
           UI.fuseState = { mode: "upgrade", base: null, mats: [] };
+          if (window.Quest) Quest.bump("fusion");
           UI.afterChange(); UI.toast(`昇華成功：${Data.byId[tid].name} を入手！`); UI.renderFusion();
         }));
       }
@@ -492,6 +564,37 @@
         UI.afterChange(); UI.renderArena();
         UI.toast(`リーグ戦完了：🪙${res.coins}${res.diamonds ? " 💎" + res.diamonds : ""}`);
       };
+    },
+
+    /* ---------- QUEST ---------- */
+    renderQuests() {
+      if (!window.Quest) { $("questBody").innerHTML = '<div class="empty-note">クエストを読み込めませんでした。</div>'; return; }
+      Quest.checkReset();
+      const section = (title, sub, list) => {
+        const rows = list.map((x) => {
+          const prog = Quest.progress(x.id), done = prog >= x.goal, claimed = Quest.isClaimed(x.id);
+          const pct = Math.min(100, (prog / x.goal) * 100);
+          return `<div class="quest ${claimed ? "claimed" : done ? "done" : ""}">
+            <div class="q-main">
+              <div class="q-name">${x.name} ${claimed ? '<span class="q-badge ok">受取済</span>' : done ? '<span class="q-badge go">達成</span>' : ""}</div>
+              <div class="q-desc">${x.desc}</div>
+              <div class="q-bar"><i style="width:${pct}%"></i></div>
+              <div class="q-meta"><span>${Math.min(prog, x.goal)} / ${x.goal}</span><span class="muted">報酬：${Quest.rewardText(x.reward)}</span></div>
+            </div>
+            <div class="q-act"><button class="gold" data-claim="${x.id}" ${done && !claimed ? "" : "disabled"}>${claimed ? "受取済" : "受け取る"}</button></div>
+          </div>`;
+        }).join("");
+        return `<div class="quest-section"><h3>${title} <span class="muted" style="font-weight:400">${sub}</span></h3>${rows}</div>`;
+      };
+      $("questBody").innerHTML =
+        section("デイリー", "毎日0時にリセット", Quest.list("daily")) +
+        section("ウィークリー", "毎週リセット", Quest.list("weekly")) +
+        section("実績", "一度だけ達成できます", Quest.list("achievement"));
+      $("questBody").querySelectorAll("[data-claim]").forEach((b) => (b.onclick = () => {
+        const r = Quest.claim(b.dataset.claim);
+        if (!r.ok) { UI.toast(r.reason); return; }
+        UI.afterChange(); UI.toast(`報酬獲得：${Quest.rewardText(r.reward)}`); UI.renderQuests();
+      }));
     },
 
     /* ---------- RANKING ---------- */

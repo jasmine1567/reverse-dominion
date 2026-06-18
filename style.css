@@ -516,3 +516,30 @@ table.rank td.num { font-variant-numeric: tabular-nums; text-align: right; }
 /* 経験値バー */
 .expbar { height: 7px; border-radius: 5px; background: var(--ink); overflow: hidden; margin: 6px 0; }
 .expbar > i { display: block; height: 100%; background: linear-gradient(90deg, #46d4d8, #5bd08a); }
+
+/* ============================================================
+   v4: デッキ保存プリセット / クエスト
+   ============================================================ */
+#deckPresets { margin-bottom: 18px; }
+.preset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 12px; }
+.preset { background: var(--ink-3); border: 1px solid var(--line); border-radius: 14px; padding: 12px; }
+.preset-head { display: flex; align-items: baseline; justify-content: space-between; margin-bottom: 6px; }
+.preset-arts { font-size: 24px; letter-spacing: 2px; min-height: 32px; margin-bottom: 10px; }
+.preset-actions { display: flex; flex-wrap: wrap; gap: 6px; }
+.preset-actions button { font-size: 12px; padding: 5px 10px; }
+
+.quest-section { margin-bottom: 24px; }
+.quest-section h3 { margin: 0 0 10px; }
+.quest { display: flex; align-items: center; gap: 12px; background: var(--ink-3); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; margin-bottom: 10px; }
+.quest.done { border-color: var(--gold); box-shadow: inset 0 0 16px color-mix(in srgb, var(--gold) 14%, transparent); }
+.quest.claimed { opacity: 0.55; }
+.quest .q-main { flex: 1; min-width: 0; }
+.quest .q-name { font-weight: 800; display: flex; align-items: center; gap: 8px; }
+.quest .q-desc { font-size: 12px; color: var(--text-dim); margin: 2px 0 6px; }
+.quest .q-bar { height: 7px; border-radius: 5px; background: var(--ink); overflow: hidden; }
+.quest .q-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--gold)); }
+.quest .q-meta { display: flex; justify-content: space-between; font-size: 12px; margin-top: 5px; font-variant-numeric: tabular-nums; }
+.quest .q-act button { white-space: nowrap; }
+.q-badge { font-size: 10px; font-weight: 800; padding: 1px 7px; border-radius: 999px; }
+.q-badge.go { background: var(--gold); color: #2a1700; }
+.q-badge.ok { background: var(--ink); color: var(--text-dim); border: 1px solid var(--line); }

@@ -223,6 +223,7 @@
     }
     Store.setDungeonProg(d.id, stage, stage === 5);
     Store.state.stats.battles++; Store.state.stats.wins++; Store.save();
+    if (window.Quest) { Quest.bump("win"); if (stage === 5) Quest.bump("boss"); }
 
     await showVictory();
 
@@ -282,6 +283,7 @@
     document.getElementById("battleLog").innerHTML = "";
     UI.show("battle");
     renderBoard(); renderHand(); updateInstruct();
+    if (window.Quest) Quest.bump("battle");
   }
 
   const Battle = {

@@ -129,6 +129,7 @@
     const res = Gacha.pull("normal", 10, { free: true });
     if (!res.ok) { UI.toast(res.reason); return; }
     Store.markDaily(); refreshDaily(); UI.refreshWallet();
+    if (window.Quest) { Quest.bump("gacha"); Quest.bump("daily_gacha"); }
     gachaReveal("normal", res);
   }
 
@@ -137,6 +138,7 @@
     const res = Gacha.pull(type, count);
     if (!res.ok) { UI.toast(res.reason); return; }
     UI.refreshWallet();
+    if (window.Quest) Quest.bump("gacha");
     gachaReveal(type, res);
   }
 
@@ -159,7 +161,7 @@
         <p class="muted">ローカルサーバ経由で開いてください。例：<span class="kbd">python3 -m http.server</span> → <span class="kbd">http://localhost:8000</span></p></div>`;
       return;
     }
-    Store.load(); World.loadWorld(); wire(); UI.refreshWallet(); refreshDaily();
+    Store.load(); if (window.Quest) Quest.init(); World.loadWorld(); wire(); UI.refreshWallet(); refreshDaily();
     if (!Store.state.player) openRegistration(); else UI.show("home");
   }
 

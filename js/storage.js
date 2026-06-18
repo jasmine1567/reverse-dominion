@@ -13,7 +13,8 @@
         player: null, coins: 1000, diamonds: 30,
         owned: [],     // [{ uid, id, marks:[], level:1, exp:0, extraSkills:[skillId] }]
         items: {},     // { itemId: count }
-        deck: [], dungeon: {}, dailyGacha: null,
+        deck: [], savedDecks: [], dungeon: {}, dailyGacha: null,
+        quests: { prog: {}, claimed: {}, daily: null, weekly: null },
         arena: { defense: [], lastClaim: 0, log: [] },
         stats: { battles: 0, wins: 0 }, seenIntro: false,
       };
@@ -76,11 +77,13 @@
       };
       this.state.owned.push(inst);
       this.save();
+      if (window.Quest) Quest.bump("obtain");
       return inst;
     },
     removeCard(uid) {
       this.state.owned = this.state.owned.filter((c) => c.uid !== uid);
       this.state.deck = this.state.deck.filter((u) => u !== uid);
+      (this.state.savedDecks || []).forEach((p) => (p.cards = p.cards.filter((u) => u !== uid)));
       this.state.arena.defense = this.state.arena.defense.filter((u) => u !== uid);
       this.save();
     },
@@ -151,11 +154,41 @@
     deckToggle(uid) {
       const d = this.state.deck, i = d.indexOf(uid);
       if (i >= 0) d.splice(i, 1);
-      else { if (d.length >= 5) return "full"; d.push(uid); }
+      else { if (d.length >= 6) return "full"; d.push(uid); }
       this.save();
       return "ok";
     },
     deckCards() { return this.state.deck.map((u) => this.resolveCard(u)).filter(Boolean); },
+
+    /* ---- 保存デッキ（最大5つ） ---- */
+    MAX_DECKS: 5,
+    saveDeckPreset(name) {
+      if (!this.state.savedDecks) this.state.savedDecks = [];
+      if (this.state.savedDecks.length >= this.MAX_DECKS) return { ok: false, reason: "保存できるデッキは5つまでです" };
+      if (this.state.deck.length === 0) return { ok: false, reason: "編成中のデッキが空です" };
+      this.state.savedDecks.push({ name: name || `デッキ${this.state.savedDecks.length + 1}`, cards: this.state.deck.slice() });
+      this.save();
+      return { ok: true };
+    },
+    overwriteDeckPreset(index, name) {
+      const p = this.state.savedDecks[index];
+      if (!p) return { ok: false, reason: "対象がありません" };
+      if (this.state.deck.length === 0) return { ok: false, reason: "編成中のデッキが空です" };
+      p.cards = this.state.deck.slice();
+      if (name) p.name = name;
+      this.save();
+      return { ok: true };
+    },
+    loadDeckPreset(index) {
+      const p = this.state.savedDecks[index];
+      if (!p) return { ok: false, reason: "対象がありません" };
+      const valid = p.cards.filter((u) => this.getInstance(u)).slice(0, 6);
+      this.state.deck = valid;
+      this.save();
+      return { ok: true, dropped: p.cards.length - valid.length };
+    },
+    renameDeckPreset(index, name) { const p = this.state.savedDecks[index]; if (p) { p.name = name; this.save(); } },
+    deleteDeckPreset(index) { this.state.savedDecks.splice(index, 1); this.save(); },
 
     /* ---- ダンジョン ---- */
     dungeonProg(id) { if (!this.state.dungeon[id]) this.state.dungeon[id] = { cleared: 0, boss: false }; return this.state.dungeon[id]; },
