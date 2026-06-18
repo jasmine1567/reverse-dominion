@@ -1,17 +1,15 @@
-/* ===== battle.js : バトル進行・描画・CPU AI ===== */
+/* ===== battle.js : バトル進行・描画・CPU AI・演出 ===== */
 (function () {
   const SIZE = 4;
-  let S = null; // セッション
+  let S = null;
+  const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-  function dirMarksHTML(marks) {
-    return '<div class="marks">' + marks.map((d) => `<i class="mk-${d}"></i>`).join("") + "</div>";
-  }
-
+  /* ---------- 描画 ---------- */
   function boardCardHTML(cell) {
     const c = cell.card;
     return (
-      `<div class="bcard ${cell.owner}" data-uid="${c.uid}">` +
-      dirMarksHTML(c.marks) +
+      `<div class="bcard ${cell.owner}">` +
+      UI.marksHTML(c.marks, "bcard-marks") +
       `<div class="bart">${c.art}</div>` +
       `<div class="bname">${c.name}</div>` +
       `<div class="bstat">⚔${Data.effAtk(c)} 🛡${Data.effDef(c)}</div>` +
@@ -19,51 +17,38 @@
     );
   }
 
-  function renderBoard(changed) {
+  function renderBoard() {
     const board = document.getElementById("board");
     board.innerHTML = "";
-    const playable = S.turn === "ally" && S.selectedHandIdx != null && Engine.canPlace(S.state, "ally");
-    for (let r = 0; r < SIZE; r++) {
-      for (let c = 0; c < SIZE; c++) {
-        const cell = S.state.cells[r][c];
-        const el = document.createElement("div");
-        el.className = "cell";
-        if (cell && cell.block) el.classList.add("block");
-        else if (cell) {
-          el.innerHTML = boardCardHTML(cell);
-          if (changed && changed.some((x) => x.r === r && x.c === c)) {
-            const bc = el.querySelector(".bcard");
-            bc.classList.add(changed.find((x) => x.r === r && x.c === c).type || "flip");
-          }
-        } else if (playable) {
-          el.classList.add("playable");
-          el.onclick = () => playerPlace(r, c);
-        }
-        board.appendChild(el);
-      }
+    const playable = S.turn === "ally" && !S.animating && S.selectedHandIdx != null && Engine.canPlace(S.state, "ally");
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const cell = S.state.cells[r][c];
+      const el = document.createElement("div");
+      el.className = "cell"; el.dataset.r = r; el.dataset.c = c;
+      if (cell && cell.block) el.classList.add("block");
+      else if (cell) el.innerHTML = boardCardHTML(cell);
+      else if (playable) { el.classList.add("playable"); el.onclick = () => playerPlace(r, c); }
+      board.appendChild(el);
     }
     const sc = Engine.score(S.state);
     document.getElementById("allyScore").textContent = sc.ally;
     document.getElementById("enemyScore").textContent = sc.enemy;
     const pill = document.getElementById("turnPill");
-    pill.textContent = S.turn === "ally" ? "あなたのターン" : "CPUのターン";
+    pill.textContent = S.animating ? "戦闘中…" : (S.turn === "ally" ? "あなたのターン" : "CPUのターン");
     pill.className = "turn-pill " + (S.turn === "ally" ? "you" : "cpu");
   }
+
+  function cellEl(rc) { return document.querySelector(`#board .cell[data-r='${rc.r}'][data-c='${rc.c}']`); }
+  function bcardEl(rc) { const e = cellEl(rc); return e ? e.querySelector(".bcard") : null; }
 
   function renderHand() {
     const hand = document.getElementById("hand");
     hand.innerHTML = "";
     S.hand.forEach((h, i) => {
-      const c = h.card;
       const el = document.createElement("div");
-      el.className = "card hcard" + (h.used ? " used" : "") + (S.selectedHandIdx === i ? " active" : "");
-      el.dataset.rarity = c.rarity;
-      el.innerHTML =
-        `<div class="rar">${c.rarity}</div>` +
-        `<div class="art" style="font-size:24px;margin-top:12px">${c.art}</div>` +
-        `<div class="nm" style="min-height:auto;font-size:11px">${c.name}</div>` +
-        `<div class="stat"><span class="a">⚔${Data.effAtk(c)}</span><span class="d">🛡${Data.effDef(c)}</span></div>`;
-      if (!h.used && S.turn === "ally" && Engine.canPlace(S.state, "ally")) {
+      el.className = "hcard" + (h.used ? " used" : "") + (S.selectedHandIdx === i ? " active" : "");
+      el.innerHTML = UI.cardHTML(h.card, { mini: true });
+      if (!h.used && S.turn === "ally" && !S.animating && Engine.canPlace(S.state, "ally")) {
         el.onclick = () => { S.selectedHandIdx = i; renderHand(); renderBoard(); updateInstruct(); };
       }
       hand.appendChild(el);
@@ -72,6 +57,7 @@
 
   function updateInstruct() {
     const t = document.getElementById("battleInstruct");
+    if (S.animating) { t.textContent = "戦闘解決中…"; return; }
     if (S.turn !== "ally") { t.textContent = "CPUが思考中…"; return; }
     if (!Engine.canPlace(S.state, "ally")) { t.textContent = "あなたの設置は完了。CPUの番です"; return; }
     t.textContent = S.selectedHandIdx == null ? "手札からカードを選んでください" : "点滅マスをタップして設置";
@@ -81,39 +67,99 @@
     const box = document.getElementById("battleLog");
     entries.forEach((e) => {
       const div = document.createElement("div");
-      const cls = ["win", "chain", "counter"].includes(e.t) ? "hl" : "";
-      div.className = cls;
+      div.className = ["win", "chain", "counter"].includes(e.t) ? "hl" : "";
       div.textContent = "› " + e.msg;
       box.appendChild(div);
     });
     box.scrollTop = box.scrollHeight;
   }
 
-  function changedFrom(result) {
-    const ch = [];
-    result.flips.forEach((p) => ch.push({ ...p, type: "flip" }));
-    result.chainFlips.forEach((p) => ch.push({ ...p, type: "flip" }));
-    result.blocked.forEach((p) => ch.push({ ...p, type: "blocked" }));
-    if (result.counterFlip) ch.push({ ...result.counterFlip, type: "flip" });
-    return ch;
+  /* ---------- エフェクト ---------- */
+  function clashLayer() {
+    let layer = document.querySelector(".board-wrap .clash-layer");
+    if (!layer) { layer = document.createElement("div"); layer.className = "clash-layer"; document.querySelector(".board-wrap").appendChild(layer); }
+    return layer;
   }
 
-  function playerPlace(r, c) {
-    if (S.turn !== "ally" || S.selectedHandIdx == null) return;
+  async function showClash(clash) {
+    const layer = clashLayer();
+    const win = clash.win;
+    const verdict = clash.type === "counter"
+      ? (win ? "反撃成功・寝返り！" : "反撃を耐えた")
+      : (clash.guarded ? "GUARD!" : (win ? "撃破・味方化！" : "BLOCK!"));
+    const cls = clash.type === "counter" ? (win ? "win counter" : "lose") : (win ? "win" : "lose");
+    const atkLoser = !win ? "" : ""; // attacker never the visual loser when win
+    const el = document.createElement("div");
+    el.className = "clash " + cls;
+    el.innerHTML =
+      `<div class="side atk ${win ? "" : "loser"}"><div class="who">⚔ 攻 ${clash.aArt} ${clash.aName}</div><div class="num">${clash.atk}</div></div>` +
+      `<div class="vs">VS</div>` +
+      `<div class="side def ${win ? "loser" : ""}"><div class="who">🛡 防 ${clash.dArt} ${clash.dName}</div><div class="num">${clash.def}</div></div>` +
+      `<div class="verdict">${verdict}</div>`;
+    layer.appendChild(el);
+
+    const aEl = bcardEl(clash.aRC), dEl = bcardEl(clash.dRC);
+    if (aEl) aEl.classList.add("fx-attacker");
+    if (dEl) dEl.classList.add("fx-hit");
+    await wait(520);
+    if (win && clash.type === "attack" && dEl) { dEl.classList.add("fx-win"); cellEl(clash.dRC)?.classList.add("fx-win-glow"); }
+    else if (clash.type === "counter" && win) { cellEl(clash.dRC)?.classList.add("fx-counter-glow"); }
+    else { dEl && dEl.classList.add("fx-block"); cellEl(clash.dRC)?.classList.add("fx-block-glow"); }
+    await wait(420);
+    el.classList.add("out");
+    await wait(260);
+    el.remove();
+    aEl && aEl.classList.remove("fx-attacker");
+  }
+
+  async function animateClashes(res, placedAt) {
+    S.animating = true;
+    renderBoard();
+    const pe = cellEl(placedAt); if (pe) { const bc = pe.querySelector(".bcard"); bc && bc.classList.add("fx-place"); }
+    if (res.enterBuff && pe) pe.classList.add("fx-enter-glow");
+    await wait(380);
+    for (const clash of res.clashes) await showClash(clash);
+    S.animating = false;
+    renderBoard();
+  }
+
+  async function showVictory() {
+    const layer = document.createElement("div");
+    layer.className = "victory-layer show";
+    layer.innerHTML = `<div class="victory-rays"></div><div class="victory-banner">VICTORY</div>`;
+    document.body.appendChild(layer);
+    const colors = ["#e8c15a", "#46d4d8", "#ff5d73", "#5bd08a", "#b06ff0", "#fff"];
+    for (let i = 0; i < 80; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = colors[(Math.random() * colors.length) | 0];
+      c.style.animationDuration = (1 + Math.random() * 1.4) + "s";
+      c.style.animationDelay = (Math.random() * 0.4) + "s";
+      document.body.appendChild(c);
+      setTimeout(() => c.remove(), 2600);
+    }
+    await wait(1500);
+    layer.remove();
+  }
+
+  /* ---------- 進行 ---------- */
+  async function playerPlace(r, c) {
+    if (S.turn !== "ally" || S.animating || S.selectedHandIdx == null) return;
     const h = S.hand[S.selectedHandIdx];
     if (h.used) return;
     const logs = [];
     const res = Engine.place(S.state, r, c, "ally", h.card, logs);
-    h.used = true;
-    S.selectedHandIdx = null;
-    res.converted.forEach((cv) => S.converted.push(cv)); // 味方化した敵カード
-    renderBoard(changedFrom(res));
+    h.used = true; S.selectedHandIdx = null;
+    res.converted.forEach((cv) => S.converted.push(cv));
     renderHand();
     log(logs);
+    await animateClashes(res, { r, c });
+    renderHand();
     afterMove("ally");
   }
 
-  function cpuMove() {
+  async function cpuMove() {
     if (Engine.isOver(S.state)) return endStage();
     const free = Engine.freeCells(S.state);
     const choices = [];
@@ -128,34 +174,29 @@
     });
     if (choices.length === 0) return endStage();
     choices.sort((a, b) => b.value - a.value);
-    // レベルが低いほど雑な手を選ぶ
     const skill = 0.45 + S.dungeon.level * 0.11;
     const pick = Math.random() < skill ? choices[0] : choices[Math.floor(Math.random() * Math.min(4, choices.length))];
-
     const h = S.cpuHand[pick.i];
     const logs = [];
     const res = Engine.place(S.state, pick.r, pick.c, "enemy", h.card, logs);
     h.used = true;
-    renderBoard(changedFrom(res));
     log(logs);
+    await animateClashes(res, { r: pick.r, c: pick.c });
     afterMove("enemy");
   }
 
   function afterMove(mover) {
     updateInstruct();
-    if (Engine.isOver(S.state)) { setTimeout(endStage, 700); return; }
+    if (Engine.isOver(S.state)) { setTimeout(endStage, 500); return; }
     let next = mover === "ally" ? "enemy" : "ally";
     if (!Engine.canPlace(S.state, next)) next = next === "ally" ? "enemy" : "ally";
     S.turn = next;
-    renderHand();
-    if (next === "enemy") {
-      setTimeout(cpuMove, 650);
-    } else {
-      renderBoard(); updateInstruct();
-    }
+    renderHand(); renderBoard(); updateInstruct();
+    if (next === "enemy") setTimeout(cpuMove, 500);
   }
 
-  function endStage() {
+  async function endStage() {
+    if (S._ended) return; S._ended = true;
     const sc = Engine.score(S.state);
     const win = sc.ally > sc.enemy;
     if (!win) {
@@ -166,7 +207,6 @@
       });
       return;
     }
-    // 勝利報酬
     const d = S.dungeon, stage = S.stage;
     const coins = d.level * 30 + stage * 12;
     let diamonds = 0;
@@ -175,14 +215,15 @@
     Store.setDungeonProg(d.id, stage, stage === 5);
     Store.state.stats.battles++; Store.state.stats.wins++; Store.save();
 
-    // 味方化したカードから1枚選んで入手
+    await showVictory();
+
     let pool = uniqueById(S.converted);
     if (pool.length === 0) pool = S.cpuDeckBase.map((c) => ({ id: c.id, name: c.name }));
     showReward(sc, coins, diamonds, pool, stage === 5);
   }
 
   function uniqueById(arr) {
-    const seen = new Set(); const out = [];
+    const seen = new Set(), out = [];
     arr.forEach((c) => { if (!seen.has(c.id)) { seen.add(c.id); out.push(c); } });
     return out;
   }
@@ -190,53 +231,42 @@
   function showReward(sc, coins, diamonds, pool, isBoss) {
     const cardsHTML = pool.map((c) => {
       const base = Data.byId[c.id];
-      return `<div class="card selectable" data-rarity="${base.rarity}" data-pick="${c.id}" style="width:120px">
+      return `<div class="card selectable" data-rarity="${base.rarity}" data-pick="${c.id}" style="width:130px">
         <div class="rar">${base.rarity}</div>
-        <div class="art" style="font-size:30px;margin-top:14px">${base.art}</div>
-        <div class="nm" style="font-size:12px">${base.name}</div>
-        <div class="stat"><span class="a">⚔${base.baseAtk}</span><span class="d">🛡${base.baseDef}</span></div>
-      </div>`;
+        <div class="card-art-frame"><div class="art">${base.art}</div></div>
+        <div class="nm">${base.name}</div>
+        <div class="stat"><span class="a">⚔${base.baseAtk}</span><span class="d">🛡${base.baseDef}</span></div></div>`;
     }).join("");
     UI.modal({
       title: isBoss ? "🏆 ダンジョン制覇！" : `ステージ ${S.stage} クリア！`,
       body:
         `<p>スコア あなた ${sc.ally} - ${sc.enemy} CPU</p>` +
         `<p>獲得：🪙${coins}${diamonds ? ` / 💎${diamonds}` : ""}</p>` +
-        `<p class="muted">味方にしたカードから1枚選んで入手：</p>` +
+        `<p class="muted">味方にしたカードから1枚選んで入手（攻撃マークはランダムで付与されます）：</p>` +
         `<div class="reveal-grid">${cardsHTML}</div>`,
-      actions: [],
-      noClose: true,
+      noClose: true, actions: [],
     });
     document.querySelectorAll("[data-pick]").forEach((el) => {
       el.onclick = () => {
-        const id = el.dataset.pick;
-        Store.addCard(id);
-        UI.closeModal();
-        UI.refreshWallet();
+        Store.addCard(el.dataset.pick);
+        UI.closeModal(); UI.refreshWallet();
         if (isBoss) { UI.toast("ダンジョン制覇！カードを入手"); UI.show("dungeon"); }
         else nextStage();
       };
     });
   }
 
-  function nextStage() {
-    S.stage++;
-    startStage();
-  }
+  function nextStage() { S.stage++; startStage(); }
 
   function startStage() {
     const d = S.dungeon, stage = S.stage;
     const blocks = World.blockCells(SIZE);
-    const state = Engine.createBoard(SIZE, blocks);
-    const deck = Store.deckCards();
+    S.state = Engine.createBoard(SIZE, blocks);
+    S.hand = Store.deckCards().map((card) => ({ card, used: false }));
     const cpuDeck = World.enemyDeck(d, stage);
-    S.state = state;
-    S.hand = deck.map((card) => ({ card, used: false }));
     S.cpuHand = cpuDeck.map((card) => ({ card, used: false }));
     S.cpuDeckBase = cpuDeck;
-    S.converted = [];
-    S.selectedHandIdx = null;
-    S.turn = "ally";
+    S.converted = []; S.selectedHandIdx = null; S.turn = "ally"; S.animating = false; S._ended = false;
 
     document.getElementById("battleTitle").textContent = `${d.name} — ステージ ${stage}/5${stage === 5 ? "（ボス）" : ""}`;
     document.getElementById("battleSub").textContent = `Lv.${d.level}　ブロック ${blocks.length}個　先手：あなた`;
@@ -248,8 +278,7 @@
   const Battle = {
     startDungeon(dungeonId) {
       const d = World.DUNGEONS.find((x) => x.id === dungeonId);
-      const deck = Store.deckCards();
-      if (deck.length < 5) { UI.toast("デッキを5枚以上編成してください"); UI.show("deck"); return; }
+      if (Store.deckCards().length < 5) { UI.toast("デッキを5枚以上編成してください"); UI.show("deck"); return; }
       S = { dungeon: d, stage: 1 };
       startStage();
     },

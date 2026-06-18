@@ -55,17 +55,18 @@
       const pool = Data.cards.filter((c) => tiers.includes(c.rarity));
       const deck = [];
       const n = 5;
+      const cpuLevel = Math.min(Data.MAX_LEVEL, 1 + Math.floor((dungeon.level - 1) * 1.6) + (stage - 1) + (isBoss ? 2 : 0));
       for (let i = 0; i < n; i++) {
         const base = pool[Math.floor(Math.random() * pool.length)] || Data.cards[0];
-        // ステージ・ボスでステータス補正
         const mult = dungeon.mult * (1 + (stage - 1) * 0.03) * (isBoss && i === 0 ? 1.25 : 1);
         deck.push({
           uid: "cpu_" + i + "_" + Math.random().toString(36).slice(2, 6),
           id: base.id, name: base.name, rarity: base.rarity, art: base.art,
           baseAtk: Math.round(base.baseAtk * mult),
           baseDef: Math.round(base.baseDef * mult),
-          marks: base.marks.slice(),
-          skill: base.skill, inheritSkill: null,
+          marks: Data.randomMarks(),
+          level: cpuLevel,
+          skill: base.skill, extraSkills: [],
           cpuBoss: isBoss && i === 0,
         });
       }
