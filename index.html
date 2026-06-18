@@ -19,6 +19,8 @@
     </div>
   </header>
 
+  <div id="announceBar"></div>
+
   <nav id="nav">
     <button data-view="home" class="active">ホーム</button>
     <button data-view="gacha">ガチャ</button>
@@ -146,8 +148,17 @@
           <div class="board" id="board"></div>
           <div class="muted" id="battleInstruct">手札からカードを選び、点滅マスに設置してください</div>
         </div>
+        <div class="turn-timer" id="turnTimer">
+          <span class="tt-ico">⏱</span>
+          <div class="tt-bar"><i id="turnTimerFill"></i></div>
+          <span class="tt-num" id="turnTimerNum">30</span>
+        </div>
         <div>
-          <div class="muted" style="margin-bottom:6px">あなたの手札（設置できるのは5枚まで）</div>
+          <div class="row" style="align-items:center;margin-bottom:6px">
+            <span class="muted">あなたの手札（設置できるのは5枚まで）</span>
+            <span class="spacer"></span>
+            <button class="ghost" id="autoBtn" style="display:none">自動操作：OFF</button>
+          </div>
           <div class="hand" id="hand"></div>
         </div>
         <div class="battle-log" id="battleLog"></div>
@@ -179,6 +190,7 @@
   <script src="js/gacha.js"></script>
   <script src="js/battle.js"></script>
   <script src="js/world.js"></script>
+  <script src="js/announce.js"></script>
   <script src="js/ui.js"></script>
   <script src="js/main.js"></script>
 </body>

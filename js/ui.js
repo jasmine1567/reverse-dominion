@@ -14,11 +14,16 @@
     return `<div class="${cls}">${card.art}</div>`;
   }
 
-  function skillLine(card) {
+  function skillLine(card, opts = {}) {
     const parts = [];
-    if (card.skill && card.skill.type !== "none") parts.push(`<b>${card.skill.name}</b>：${card.skill.desc}`);
+    const lv = (s) => (s.level && s.level > 1) ? ` <span style="color:var(--gold)">Lv${s.level}</span>` : "";
+    if (card.skill && card.skill.type !== "none") parts.push(`<b>${card.skill.name}</b>${lv(card.skill)}：${card.skill.desc}`);
     else parts.push('<span class="muted">固有スキルなし</span>');
-    (card.extraSkills || []).forEach((s) => parts.push(`<b style="color:var(--cyan)">＋${s.name}</b>：${s.desc}`));
+    (card.extraSkills || []).forEach((s) => parts.push(`<b style="color:var(--cyan)">＋${s.name}</b>${lv(s)}：${s.desc}`));
+    if (opts.leader && card.leaderSkill) {
+      const ls = card.leaderSkill;
+      parts.push(`<b style="color:#e7d6a8">👑${ls.name}</b>${ls.level > 1 ? ` <span style="color:var(--gold)">Lv${ls.level}</span>` : ""}：${Data.leaderDesc(ls, ls.level)}`);
+    }
     return parts.join("<br>");
   }
 
@@ -64,6 +69,7 @@
     cardHTML, marksHTML, skillLine, artHTML,
 
     show(view) {
+      if (view !== "battle" && window.Battle && Battle.stopTimers) Battle.stopTimers();
       document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
       $("view-" + view)?.classList.add("active");
       document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
@@ -116,30 +122,62 @@
     },
 
     /* ---------- HOME ---------- */
+    homeAdvice() {
+      const s = Store.state;
+      if (window.Quest && Quest.claimable() > 0) return { icon: "🎁", msg: `受け取れる報酬が ${Quest.claimable()} 件あります。クエスト画面で受け取ろう！`, go: "quest" };
+      if (Store.canDaily && Store.canDaily()) return { icon: "🎁", msg: "デイリー無料10連がまだです。引いておこう！", go: "gacha" };
+      if (window.Quest) {
+        const dailyLeft = Quest.list("daily").some((q) => !Quest.isComplete(q));
+        if (dailyLeft) return { icon: "🎯", msg: "デイリークエストをクリアして報酬を集めよう！", go: "quest" };
+      }
+      if (s.deck.length < 6) return { icon: "🎴", msg: "デッキを6枚編成してリーダーを設定しよう。", go: "deck" };
+      if ((s.savedDecks || []).length === 0) return { icon: "💾", msg: "編成したデッキは保存しておくと便利です。", go: "deck" };
+      const nextD = World.DUNGEONS.find((d) => !(s.dungeon[d.id] && s.dungeon[d.id].boss));
+      if (nextD) return { icon: "🏰", msg: `次は「${nextD.name}」に挑戦してみよう！`, go: "dungeon" };
+      if (window.Quest) { const wk = Quest.list("weekly").some((q) => !Quest.isComplete(q)); if (wk) return { icon: "📅", msg: "ウィークリークエストの達成を目指そう！", go: "quest" }; }
+      return { icon: "⚔️", msg: "競技場でリーグ戦に挑戦して報酬を稼ごう！", go: "arena" };
+    },
+
     renderHome() {
       const s = Store.state;
       $("homeGreeting").textContent = `ようこそ、${s.player?.name || "プレイヤー"} さん`;
       const owned = s.owned.length;
       const clears = World.DUNGEONS.filter((d) => s.dungeon[d.id]?.boss).length;
       const rk = World.ranking(s);
+      const leader = Store.leaderCard ? Store.leaderCard() : null;
+      const adv = this.homeAdvice();
       const tile = (label, val, view, icon) =>
-        `<div class="card selectable" data-tile="${view}" style="text-align:center">
-          <div class="card-art-frame"><div class="art">${icon}</div></div>
-          <div class="nm">${label}</div><div class="stat"><b style="font-size:16px">${val}</b></div></div>`;
+        `<div class="card framed selectable" data-tile="${view}" data-rarity="N" style="text-align:center">
+          <div class="card-inner"><div class="fr-illust"><div class="cart">${icon}</div></div>
+          <div class="fr-name">${label}</div><div class="fr-stats" style="justify-content:center"><b style="font-size:16px;font-family:'Cinzel',serif">${val}</b></div></div></div>`;
+      const leaderHTML = leader
+        ? `<div class="leader-card">${cardHTML(leader)}</div>`
+        : `<div class="leader-empty">👑<br><span class="muted">デッキにリーダーを設定すると<br>ここに表示されます</span></div>`;
+      const lsLine = leader && leader.leaderSkill ? `<div class="ls-line">👑 ${leader.leaderSkill.name}：${Data.leaderDesc(leader.leaderSkill, leader.leaderSkill.level)} <span class="muted">(Lv.${leader.leaderSkill.level})</span></div>` : "";
       $("homeBody").innerHTML = `
-        <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(160px,1fr))">
+        <div class="home-hero">
+          <div class="leader-stage">${leaderHTML}</div>
+          <div class="home-side">
+            <div class="advice" data-go="${adv.go}"><span class="adv-ico">${adv.icon}</span><span>${adv.msg}</span></div>
+            ${lsLine}
+            <div class="row" style="margin-top:10px">
+              <button class="primary" data-go="gacha">ガチャ</button>
+              <button data-go="dungeon">ダンジョン</button>
+              <button data-go="quest">クエスト</button>
+            </div>
+          </div>
+        </div>
+        <div class="card-grid" style="grid-template-columns:repeat(auto-fill,minmax(150px,1fr));margin-top:20px">
           ${tile("所持カード", owned + " 枚", "collection", "🃏")}
           ${tile("デッキ", s.deck.length + " / 6", "deck", "🎴")}
           ${tile("ダンジョン制覇", clears + " / " + World.DUNGEONS.length, "dungeon", "🏰")}
-          ${tile("クエスト", (window.Quest ? Quest.claimable() : 0) + " 件受取可", "quest", "🎯")}
-          ${tile("ランキング", rk.rank + " 位 / " + rk.total, "ranking", "📊")}
+          ${tile("クエスト", (window.Quest ? Quest.claimable() : 0) + " 件", "quest", "🎯")}
+          ${tile("ランキング", rk.rank + " 位", "ranking", "📊")}
         </div>
-        <div class="row" style="margin-top:22px">
-          <button class="primary" data-go="gacha">ガチャを引く</button>
-          <button data-go="dungeon">ダンジョンに挑む</button>
+        <div class="row" style="margin-top:18px">
           <button class="ghost" id="resetBtn">セーブをリセット</button>
         </div>
-        <p class="muted" style="margin-top:18px">対人要素（競技場の自動対戦・全体ランキング）は本来サーバが必要なため、ここではローカルのモックで動作しています。</p>`;
+        <p class="muted" style="margin-top:14px">対人要素（競技場の自動対戦・全体ランキング・他プレイヤーの入手アナウンス）は本来サーバが必要なため、ここではローカルのモックで動作しています。</p>`;
       $("homeBody").querySelectorAll("[data-go]").forEach((b) => (b.onclick = () => UI.show(b.dataset.go)));
       $("homeBody").querySelectorAll("[data-tile]").forEach((b) => (b.onclick = () => UI.show(b.dataset.tile)));
       $("resetBtn").onclick = () => UI.modal({
@@ -201,7 +239,7 @@
               <p class="muted">${isMax ? "MAXレベル" : `EXP ${card.exp} / ${card.expNeed}`}</p>
               <p>実効 ⚔<b>${Data.effAtk(card)}</b> / 🛡<b>${Data.effDef(card)}</b>　<span class="muted">(基礎 ${base.baseAtk}/${base.baseDef})</span></p>
               <p class="muted">攻撃マーク ${card.marks.length} 方向：${card.marks.join(" ")}（多いほど係数で弱体）</p>
-              <p>${skillLine(card)}</p>
+              <p>${skillLine(card, { leader: true })}</p>
               ${isMax ? '<p style="color:var(--gold)">★MAX到達：合成タブで「スキル合成」が可能です</p>' : ""}
               <p class="muted">所持 ${g.insts.length} 枚 / 1枚売却で 🪙${sell}</p>
             </div></div>`,
@@ -230,12 +268,21 @@
         const el = document.createElement("div");
         if (uid) {
           const card = Store.resolveCard(uid);
-          el.className = "deck-slot filled";
-          el.innerHTML = `<div class="art">${card.art}</div><div>${card.name}</div><div class="muted">Lv${card.level} ⚔${Data.effAtk(card)} 🛡${Data.effDef(card)}</div>`;
-          el.onclick = () => { Store.deckToggle(uid); UI.renderDeck(); };
+          const isLeader = Store.state.leaderUid === uid;
+          el.className = "deck-slot filled" + (isLeader ? " leader" : "");
+          el.innerHTML =
+            (isLeader ? '<div class="leader-tag">👑 リーダー</div>' : "") +
+            `<div class="art">${card.art}</div><div>${card.name}</div>` +
+            `<div class="muted">Lv${card.level} ⚔${Data.effAtk(card)} 🛡${Data.effDef(card)}</div>` +
+            `<div class="slot-actions">` +
+              (isLeader ? "" : `<button class="mini-btn" data-lead="${uid}">👑設定</button>`) +
+              `<button class="mini-btn ghost" data-remove="${uid}">外す</button>` +
+            `</div>`;
         } else { el.className = "deck-slot"; el.innerHTML = `<div class="art">＋</div><div>空き</div>`; }
         slots.appendChild(el);
       }
+      slots.querySelectorAll("[data-lead]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); Store.setLeader(b.dataset.lead); UI.toast("リーダーを設定しました"); UI.renderDeck(); }));
+      slots.querySelectorAll("[data-remove]").forEach((b) => (b.onclick = (e) => { e.stopPropagation(); Store.deckToggle(b.dataset.remove); UI.renderDeck(); }));
       const pool = $("deckPool");
       const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
       groups.sort((a, b) => Data.rarityRank(b.card.rarity) - Data.rarityRank(a.card.rarity) || b.card.level - a.card.level);
@@ -260,9 +307,11 @@
       const decks = Store.state.savedDecks || [];
       const slotsHTML = decks.map((p, i) => {
         const arts = p.cards.map((u) => Store.resolveCard(u)).filter(Boolean).map((c) => c.art).join("");
+        const lc = p.leader ? Store.resolveCard(p.leader) : null;
         return `<div class="preset">
           <div class="preset-head"><b>${p.name}</b><span class="muted">${p.cards.length}枚</span></div>
           <div class="preset-arts">${arts || "（空）"}</div>
+          ${lc ? `<div class="muted" style="font-size:11px;margin-bottom:6px">👑 ${lc.name}</div>` : ""}
           <div class="preset-actions">
             <button class="primary" data-load="${i}">編成にセット</button>
             <button data-over="${i}">上書き保存</button>
@@ -309,28 +358,137 @@
     },
 
     /* ---------- FUSION ---------- */
-    fuseState: { mode: "inherit", base: null, mats: [] },
+    fuseState: { mode: "enhance", base: null, mats: [], items: {} },
     renderFusion() {
       const v = $("view-fusion");
+      const skillOpen = Store.skillFusionUnlocked();
       v.innerHTML = `
-        <div class="section-title"><h2>合成</h2><p>レベル強化（経験値）／スキル合成（MAXに追加付与）／上位レア昇華（SSR・URはここでのみ）</p></div>
+        <div class="section-title"><h2>合成</h2><p>レベル強化（経験値）／スキルレベル・スキル合成（ダンジョン2クリアで解放）／上位レア昇華</p></div>
         <div class="toolbar">
           <button id="fmEnhance">レベル強化</button>
-          <button id="fmInherit">スキル合成</button>
+          <button id="fmSkill">スキルレベル ${skillOpen ? "" : "🔒"}</button>
+          <button id="fmInherit">スキル合成 ${skillOpen ? "" : "🔒"}</button>
           <button id="fmUpgrade">上位レア昇華</button>
           <span class="spacer"></span><span class="muted" id="fuseDesc"></span>
         </div>
         <div id="fuseArea"></div>`;
       $("fmEnhance").onclick = () => { UI.fuseState = { mode: "enhance", base: null, mats: [], items: {} }; UI.renderFusion(); };
-      $("fmInherit").onclick = () => { UI.fuseState = { mode: "inherit", base: null, mats: [] }; UI.renderFusion(); };
+      $("fmSkill").onclick = () => { if (!Store.skillFusionUnlocked()) { UI.toast("ダンジョン2をクリアすると解放されます"); return; } UI.fuseState = { mode: "skill", base: null, slot: null, skillId: null, mats: [] }; UI.renderFusion(); };
+      $("fmInherit").onclick = () => { if (!Store.skillFusionUnlocked()) { UI.toast("ダンジョン2をクリアすると解放されます"); return; } UI.fuseState = { mode: "inherit", base: null, mats: [] }; UI.renderFusion(); };
       $("fmUpgrade").onclick = () => { UI.fuseState = { mode: "upgrade", base: null, mats: [] }; UI.renderFusion(); };
-      $("fmEnhance").classList.toggle("primary", this.fuseState.mode === "enhance");
-      $("fmInherit").classList.toggle("primary", this.fuseState.mode === "inherit");
-      $("fmUpgrade").classList.toggle("primary", this.fuseState.mode === "upgrade");
-      const m = this.fuseState.mode;
-      m === "enhance" ? this.renderEnhance() : m === "inherit" ? this.renderInherit() : this.renderUpgrade();
+      const mode = this.fuseState.mode;
+      $("fmEnhance").classList.toggle("primary", mode === "enhance");
+      $("fmSkill").classList.toggle("primary", mode === "skill");
+      $("fmInherit").classList.toggle("primary", mode === "inherit");
+      $("fmUpgrade").classList.toggle("primary", mode === "upgrade");
+      if ((mode === "inherit" || mode === "skill") && !skillOpen) {
+        $("fuseDesc").textContent = "";
+        $("fuseArea").innerHTML = `<div class="empty-note">🔒 この機能は<b>ダンジョン2「ゴブリン砦」</b>のボスを撃破すると解放されます。</div>`;
+        return;
+      }
+      mode === "enhance" ? this.renderEnhance() : mode === "skill" ? this.renderSkillLevel() : mode === "inherit" ? this.renderInherit() : this.renderUpgrade();
     },
     instById(uid) { return Store.state.owned.find((o) => o.uid === uid); },
+
+    /* ---------- スキルレベル（同じスキルカードを合成） ---------- */
+    renderSkillLevel() {
+      $("fuseDesc").textContent = "固有/リーダー/追加スキルを個別にレベルアップ（同じスキルのカードを消費）";
+      const fs = this.fuseState;
+      const baseInst = fs.base ? this.instById(fs.base) : null;
+      const baseCard = baseInst ? Store.materialize(baseInst) : null;
+
+      if (!baseCard) {
+        $("fuseArea").innerHTML = `<div class="toolbar"><b>強化したいカードを選択：</b></div><div class="card-grid" id="fusePool"></div>`;
+        this.fillSkillPool();
+        return;
+      }
+      // スキルスロット一覧
+      const slots = [];
+      if (baseCard.skill && baseCard.skill.type !== "none") slots.push({ slot: "innate", id: baseCard.skill.id, label: "固有", name: baseCard.skill.name, lv: baseInst.innateLv || 1 });
+      if (baseCard.leaderSkill) slots.push({ slot: "leader", id: baseCard.leaderSkillId, label: "リーダー", name: baseCard.leaderSkill.name, lv: baseInst.leaderLv || 1 });
+      (baseCard.extraSkills || []).forEach((s) => slots.push({ slot: "extra", id: s.id, label: "追加", name: s.name, lv: (baseInst.extraLv && baseInst.extraLv[s.id]) || 1 }));
+
+      const sel = fs.slot ? slots.find((s) => s.slot === fs.slot && s.id === fs.skillId) : null;
+      let detail = "";
+      if (sel) {
+        const need = Data.skillUpCost(sel.lv);
+        const isMaxLv = sel.lv >= Data.MAX_SKILL_LEVEL;
+        // 同じスキルの素材候補
+        const valids = Store.state.owned.filter((o) => {
+          if (o.uid === fs.base) return false;
+          const b = Data.byId[o.id];
+          if (sel.slot === "leader") return b.leaderSkill === sel.id;
+          return b.skill && b.skill.id === sel.id;
+        });
+        const chosen = fs.mats.filter((u) => this.instById(u));
+        detail = `
+          <div class="skill-panel">
+            <p>「<b>${sel.name}</b>」（${sel.label}） 現在 <b>Lv.${sel.lv}</b> / ${Data.MAX_SKILL_LEVEL}</p>
+            ${isMaxLv ? '<p style="color:var(--gold)">スキルレベルが最大です</p>' :
+              `<p class="muted">Lv.${sel.lv}→${sel.lv + 1} に必要：同じスキルのカード <b>${need}</b> 枚（選択 ${chosen.length}/${need}）</p>
+               <div class="row" style="margin:8px 0"><button class="gold" id="doSkillUp" ${chosen.length >= need ? "" : "disabled"}>スキルレベルアップ</button>
+               <span class="muted">素材は消費されます</span></div>
+               <div class="toolbar"><b>素材（「${sel.name}」を持つカード）：</b></div>
+               <div class="card-grid" id="skillMatPool">${valids.length ? "" : '<span class="muted">同じスキルを持つカードがありません。</span>'}</div>`}
+          </div>`;
+      }
+
+      $("fuseArea").innerHTML = `
+        <div class="fusion-zone">
+          <div><div class="muted" style="margin-bottom:6px">強化するカード</div>
+            <div class="fusion-slot">${cardHTML(baseCard)}</div>
+            <button class="ghost" id="skillBack" style="margin-top:8px">別のカードを選ぶ</button></div>
+          <div style="flex:1;min-width:220px">
+            <div class="muted" style="margin-bottom:6px">スキルを選択</div>
+            <div class="skill-slot-list">${slots.map((s) => `<button class="skill-slot ${fs.slot === s.slot && fs.skillId === s.id ? "sel" : ""}" data-slot="${s.slot}" data-sid="${s.id}"><span class="ss-label">${s.label}</span> ${s.name} <span class="ss-lv">Lv.${s.lv}</span></button>`).join("")}</div>
+            ${detail}
+          </div>
+        </div>`;
+      $("skillBack").onclick = () => { UI.fuseState = { mode: "skill", base: null, slot: null, skillId: null, mats: [] }; UI.renderFusion(); };
+      $("fuseArea").querySelectorAll(".skill-slot").forEach((b) => (b.onclick = () => { fs.slot = b.dataset.slot; fs.skillId = b.dataset.sid; fs.mats = []; UI.renderSkillLevel(); }));
+
+      if (sel) {
+        const pool = $("skillMatPool");
+        if (pool) {
+          const valids = Store.state.owned.filter((o) => {
+            if (o.uid === fs.base) return false;
+            const b = Data.byId[o.id];
+            if (sel.slot === "leader") return b.leaderSkill === sel.id;
+            return b.skill && b.skill.id === sel.id;
+          });
+          // group identical for display
+          pool.innerHTML += valids.map((o) => {
+            const card = Store.materialize(o);
+            const isSel = fs.mats.includes(o.uid);
+            return cardHTML(card, { selectable: true, selected: isSel, data: `data-mat="${o.uid}"` });
+          }).join("");
+          pool.querySelectorAll("[data-mat]").forEach((el) => (el.onclick = () => {
+            const u = el.dataset.mat, idx = fs.mats.indexOf(u);
+            if (idx >= 0) fs.mats.splice(idx, 1); else fs.mats.push(u);
+            UI.renderSkillLevel();
+          }));
+        }
+        const btn = $("doSkillUp");
+        if (btn) btn.onclick = () => {
+          const r = Store.skillUp(fs.base, fs.slot, fs.skillId, fs.mats.slice());
+          if (!r.ok) { UI.toast(r.reason); return; }
+          if (window.Quest) Quest.bump("fusion");
+          fs.mats = [];
+          UI.afterChange(); UI.toast(`スキルLv.${r.level} に上昇！`); UI.renderSkillLevel();
+        };
+      }
+    },
+    fillSkillPool() {
+      const pool = $("fusePool");
+      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      // 何かしらスキルを持つカードのみ（固有 or リーダーは全カード持つ）
+      pool.innerHTML = groups.map((g) => cardHTML(g.card, { qty: g.insts.length, selectable: true, data: `data-key="${g.key}"` })).join("");
+      pool.querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
+        const g = groups.find((x) => x.key === el.dataset.key);
+        UI.fuseState.base = g.insts[0].uid; UI.fuseState.slot = null; UI.fuseState.skillId = null; UI.fuseState.mats = [];
+        UI.renderSkillLevel();
+      }));
+    },
 
     renderEnhance() {
       $("fuseDesc").textContent = "ベースに素材カード・経験値アイテムを合成してレベルアップ";

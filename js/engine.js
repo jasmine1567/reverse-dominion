@@ -6,10 +6,10 @@
     return [card.skill, ...(card.extraSkills || [])].filter((s) => s && s.type && s.type !== "none");
   }
   function sumSkill(card, trigger, type) {
-    return skillsOf(card).filter((s) => s.trigger === trigger && s.type === type).reduce((a, s) => a + (s.value || 0), 0);
+    return skillsOf(card).filter((s) => s.trigger === trigger && s.type === type).reduce((a, s) => a + Data.skillVal(s), 0);
   }
   function maxSkill(card, trigger, type) {
-    return skillsOf(card).filter((s) => s.trigger === trigger && s.type === type).reduce((a, s) => Math.max(a, s.value || 0), 0);
+    return skillsOf(card).filter((s) => s.trigger === trigger && s.type === type).reduce((a, s) => Math.max(a, Data.skillVal(s)), 0);
   }
   const attackBonus = (c) => sumSkill(c, "attack", "atk_up");
   const counterBonus = (c) => sumSkill(c, "counter", "counter_up");

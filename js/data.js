@@ -29,6 +29,28 @@
   ];
   const ITEM_BY_ID = {}; ITEMS.forEach((it) => (ITEM_BY_ID[it.id] = it));
 
+  // スキルレベル：固有/追加スキルは効果値が レベルで上昇（Lv1=1.0, +0.5/Lv）
+  const MAX_SKILL_LEVEL = 5;
+  function skillVal(skill) {
+    const lv = skill.level || 1;
+    return Math.round((skill.value || 0) * (1 + (lv - 1) * 0.5));
+  }
+  // スキルLvL→L+1 に必要な「同じスキルカード」枚数 = L
+  function skillUpCost(level) { return level; }
+
+  // リーダースキル（メタ効果）。value は1レベルあたりの値、レベルで乗算
+  const LEADER_SKILLS = {
+    ls_atk:    { id: "ls_atk",    name: "闘気の号令", kind: "atk",    base: 6,  unit: "%", desc: "デッキ全体の攻撃力" },
+    ls_def:    { id: "ls_def",    name: "鉄壁の号令", kind: "def",    base: 6,  unit: "%", desc: "デッキ全体の防御力" },
+    ls_all:    { id: "ls_all",    name: "王の威光",   kind: "all",    base: 4,  unit: "%", desc: "デッキ全体の攻撃力・防御力" },
+    ls_second: { id: "ls_second", name: "後の先",     kind: "second", base: 12, unit: "%", desc: "後攻になる確率" },
+    ls_coin:   { id: "ls_coin",   name: "幸運の導き", kind: "coin",   base: 12, unit: "%", desc: "コイン報酬" },
+    ls_drop:   { id: "ls_drop",   name: "宝物発見",   kind: "drop",   base: 15, unit: "%", desc: "アイテム入手率" },
+  };
+  function leaderSkillById(id) { return LEADER_SKILLS[id] || null; }
+  function leaderVal(ls, level) { return (ls.base || 0) * (level || 1); }
+  function leaderDesc(ls, level) { return `${ls.desc} +${leaderVal(ls, level)}${ls.unit}`; }
+
   function markCoef(n) { return Math.max(0.45, 1 - (n - 1) * 0.07); }
   function levelMult(level) { return 1 + ((level || 1) - 1) * 0.06; }
 
@@ -55,9 +77,9 @@
 
   const Data = {
     DIRS, ALL_DIRS, OPPOSITE, RARITY_ORDER, RARITY_NEXT, SELL_VALUE, FUSE_UPGRADE_COUNT,
-    MAX_LEVEL, EXTRA_SKILL_CAP, ITEMS,
+    MAX_LEVEL, EXTRA_SKILL_CAP, ITEMS, LEADER_SKILLS, MAX_SKILL_LEVEL,
     markCoef, levelMult, effAtk, effDef, levelUpCost, randomMarks,
-    expToNext, cardXp,
+    expToNext, cardXp, skillVal, skillUpCost, leaderSkillById, leaderVal, leaderDesc,
     itemById(id) { return ITEM_BY_ID[id] || null; },
     cards: [], byId: {}, ready: false,
 

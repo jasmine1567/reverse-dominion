@@ -162,6 +162,7 @@
       return;
     }
     Store.load(); if (window.Quest) Quest.init(); World.loadWorld(); wire(); UI.refreshWallet(); refreshDaily();
+    if (window.Announce) Announce.init();
     if (!Store.state.player) openRegistration(); else UI.show("home");
   }
 

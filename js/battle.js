@@ -144,19 +144,94 @@
   }
 
   /* ---------- 進行 ---------- */
-  async function playerPlace(r, c) {
-    if (S.turn !== "ally" || S.animating || S.selectedHandIdx == null) return;
-    const h = S.hand[S.selectedHandIdx];
-    if (h.used) return;
+  async function placeAlly(i, r, c) {
+    clearTimer();
+    const h = S.hand[i];
+    if (!h || h.used) return;
+    S.selectedHandIdx = null;
     const logs = [];
     const res = Engine.place(S.state, r, c, "ally", h.card, logs);
-    h.used = true; S.selectedHandIdx = null;
+    h.used = true;
     res.converted.forEach((cv) => S.converted.push(cv));
     renderHand();
     log(logs);
     await animateClashes(res, { r, c });
     renderHand();
     afterMove("ally");
+  }
+
+  async function playerPlace(r, c) {
+    if (S.turn !== "ally" || S.animating || S.selectedHandIdx == null) return;
+    await placeAlly(S.selectedHandIdx, r, c);
+  }
+
+  function bestAllyMove() {
+    const free = Engine.freeCells(S.state);
+    let best = null;
+    S.hand.forEach((h, i) => {
+      if (h.used) return;
+      free.forEach(({ r, c }) => {
+        const clone = Engine.clone(S.state);
+        Engine.place(clone, r, c, "ally", h.card, []);
+        const sc = Engine.score(clone);
+        const v = sc.ally - sc.enemy;
+        if (!best || v > best.value) best = { i, r, c, value: v };
+      });
+    });
+    return best;
+  }
+
+  async function autoPlace() {
+    if (!S || S.turn !== "ally" || S.animating || S._ended) return;
+    if (!Engine.canPlace(S.state, "ally")) { afterMove("ally"); return; }
+    const m = bestAllyMove();
+    if (!m) { afterMove("ally"); return; }
+    S.selectedHandIdx = m.i; renderHand(); renderBoard();
+    await new Promise((res) => setTimeout(res, 280));
+    await placeAlly(m.i, m.r, m.c);
+  }
+
+  /* ---------- 30秒タイマー / 自動操作 ---------- */
+  function clearTimer() {
+    if (S && S.timerId) { clearInterval(S.timerId); S.timerId = null; }
+    const wrap = document.getElementById("turnTimer");
+    if (wrap) wrap.classList.remove("show", "auto", "urgent");
+  }
+  function startTimer() {
+    clearTimer();
+    if (!S || S.turn !== "ally" || S.animating || S._ended) return;
+    if (!Engine.canPlace(S.state, "ally")) return;
+    const wrap = document.getElementById("turnTimer");
+    const fill = document.getElementById("turnTimerFill");
+    const num = document.getElementById("turnTimerNum");
+    if (S.auto) {
+      if (wrap) wrap.classList.add("show", "auto");
+      if (num) num.textContent = "AUTO";
+      setTimeout(() => { if (S && S.auto) autoPlace(); }, 600);
+      return;
+    }
+    S.remain = 30;
+    if (wrap) wrap.classList.add("show");
+    const upd = () => { if (fill) fill.style.width = (S.remain / 30 * 100) + "%"; if (num) num.textContent = S.remain; if (wrap) wrap.classList.toggle("urgent", S.remain <= 5); };
+    upd();
+    S.timerId = setInterval(() => {
+      S.remain--; upd();
+      if (S.remain <= 0) { clearTimer(); UI.toast("時間切れ：自動で設置します"); autoPlace(); }
+    }, 1000);
+  }
+  function toggleAuto() {
+    S.auto = !S.auto;
+    const b = document.getElementById("autoBtn");
+    if (b) { b.textContent = "自動操作：" + (S.auto ? "ON" : "OFF"); b.classList.toggle("primary", S.auto); }
+    if (S.turn === "ally" && !S.animating && !S._ended) startTimer();
+  }
+  function setupAutoButton() {
+    const b = document.getElementById("autoBtn");
+    if (!b) return;
+    if (Store.autoUnlocked()) {
+      b.style.display = ""; b.textContent = "自動操作：" + (S.auto ? "ON" : "OFF");
+      b.classList.toggle("primary", !!S.auto); b.onclick = toggleAuto;
+    } else { b.style.display = "none"; }
   }
 
   async function cpuMove() {
@@ -186,6 +261,7 @@
   }
 
   function afterMove(mover) {
+    clearTimer();
     updateInstruct();
     if (Engine.isOver(S.state)) { setTimeout(endStage, 500); return; }
     let next = mover === "ally" ? "enemy" : "ally";
@@ -193,10 +269,12 @@
     S.turn = next;
     renderHand(); renderBoard(); updateInstruct();
     if (next === "enemy") setTimeout(cpuMove, 500);
+    else setTimeout(startTimer, 200);
   }
 
   async function endStage() {
     if (S._ended) return; S._ended = true;
+    clearTimer();
     const sc = Engine.score(S.state);
     const win = sc.ally > sc.enemy;
     if (!win) {
@@ -208,16 +286,18 @@
       return;
     }
     const d = S.dungeon, stage = S.stage;
-    const coins = d.level * 30 + stage * 12;
+    const meta = S.meta || {};
+    const coins = Math.round((d.level * 30 + stage * 12) * (1 + (meta.coinPct || 0) / 100));
     let diamonds = 0;
     Store.addCoins(coins);
     if (stage === 5) { diamonds = d.level * 3; Store.addDiamonds(diamonds); }
-    // 経験値アイテムのドロップ
+    // 経験値アイテムのドロップ（リーダーのドロップUPで確率上昇）
     const items = [];
+    const dropChance = Math.min(0.95, 0.5 * (1 + (meta.dropPct || 0) / 100));
     if (stage === 5) {
       const big = d.level >= 4 ? "orb_l" : "orb_m";
       Store.addItem(big, 1); items.push(big);
-    } else if (Math.random() < 0.5) {
+    } else if (Math.random() < dropChance) {
       const it = Math.random() < 0.2 ? "orb_m" : "orb_s";
       Store.addItem(it, 1); items.push(it);
     }
@@ -270,27 +350,60 @@
 
   function startStage() {
     const d = S.dungeon, stage = S.stage;
+    const m = S.meta || {};
     const blocks = World.blockCells(SIZE);
     S.state = Engine.createBoard(SIZE, blocks);
-    S.hand = Store.deckCards().map((card) => ({ card, used: false }));
+    S.hand = Store.deckCards().map((base) => {
+      const card = { ...base };
+      if (m.atkPct) card.baseAtk = Math.round(card.baseAtk * (1 + m.atkPct / 100));
+      if (m.defPct) card.baseDef = Math.round(card.baseDef * (1 + m.defPct / 100));
+      return { card, used: false };
+    });
     const cpuDeck = World.enemyDeck(d, stage);
     S.cpuHand = cpuDeck.map((card) => ({ card, used: false }));
     S.cpuDeckBase = cpuDeck;
-    S.converted = []; S.selectedHandIdx = null; S.turn = "ally"; S.animating = false; S._ended = false;
+    S.converted = []; S.selectedHandIdx = null; S.animating = false; S._ended = false;
+    // 後攻になる確率（リーダースキル）
+    const goSecond = (m.second || 0) > 0 && Math.random() * 100 < m.second;
+    S.turn = goSecond ? "enemy" : "ally";
 
     document.getElementById("battleTitle").textContent = `${d.name} — ステージ ${stage}/5${stage === 5 ? "（ボス）" : ""}`;
-    document.getElementById("battleSub").textContent = `Lv.${d.level}　ブロック ${blocks.length}個　先手：あなた`;
+    const lead = S.leader ? `　👑${S.leader.name}` : "";
+    const lsTxt = S.leaderSkillText ? `　${S.leaderSkillText}` : "";
+    document.getElementById("battleSub").textContent = `Lv.${d.level}　ブロック ${blocks.length}個　先手：${goSecond ? "CPU" : "あなた"}${lead}${lsTxt}`;
     document.getElementById("battleLog").innerHTML = "";
     UI.show("battle");
+    setupAutoButton();
     renderBoard(); renderHand(); updateInstruct();
     if (window.Quest) Quest.bump("battle");
+    if (S.turn === "enemy") setTimeout(cpuMove, 700);
+    else setTimeout(startTimer, 400);
+  }
+
+  function computeLeaderMeta() {
+    const leader = Store.leaderCard();
+    S.leader = leader || null;
+    const meta = { atkPct: 0, defPct: 0, second: 0, coinPct: 0, dropPct: 0 };
+    S.leaderSkillText = "";
+    if (leader && leader.leaderSkill) {
+      const ls = leader.leaderSkill, v = Data.leaderVal(ls, ls.level);
+      if (ls.kind === "atk") meta.atkPct = v;
+      else if (ls.kind === "def") meta.defPct = v;
+      else if (ls.kind === "all") { meta.atkPct = v; meta.defPct = v; }
+      else if (ls.kind === "second") meta.second = v;
+      else if (ls.kind === "coin") meta.coinPct = v;
+      else if (ls.kind === "drop") meta.dropPct = v;
+      S.leaderSkillText = `${ls.name}(${Data.leaderDesc(ls, ls.level)})`;
+    }
+    S.meta = meta;
   }
 
   const Battle = {
     startDungeon(dungeonId) {
       const d = World.DUNGEONS.find((x) => x.id === dungeonId);
       if (Store.deckCards().length < 5) { UI.toast("デッキを5枚以上編成してください"); UI.show("deck"); return; }
-      S = { dungeon: d, stage: 1 };
+      S = { dungeon: d, stage: 1, auto: false };
+      computeLeaderMeta();
       startStage();
     },
     quit() {
@@ -299,10 +412,11 @@
         body: '<p class="muted">この挑戦の進捗は失われます。</p>',
         actions: [
           { label: "続ける", onClick: () => UI.closeModal() },
-          { label: "リタイア", danger: true, onClick: () => { UI.closeModal(); UI.show("dungeon"); } },
+          { label: "リタイア", danger: true, onClick: () => { clearTimer(); UI.closeModal(); UI.show("dungeon"); } },
         ],
       });
     },
+    stopTimers() { clearTimer(); },
   };
 
   window.Battle = Battle;

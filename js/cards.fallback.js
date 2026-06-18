@@ -1,4 +1,4 @@
-/* 自動生成: cards.json のフォールバック（file:// 直開き用） */
+/* 自動生成: cards.json のフォールバック（file:// 直開き用）。cards.json を編集したら再生成してください。 */
 window.CARDS_FALLBACK = {
   "meta": {
     "version": 1,
@@ -33,7 +33,8 @@ window.CARDS_FALLBACK = {
         "type": "none",
         "value": 0,
         "desc": "効果なし"
-      }
+      },
+      "leaderSkill": "ls_atk"
     },
     {
       "id": "n002",
@@ -54,7 +55,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 6,
         "desc": "攻撃時、自身の攻撃力+6"
-      }
+      },
+      "leaderSkill": "ls_def"
     },
     {
       "id": "n003",
@@ -74,7 +76,8 @@ window.CARDS_FALLBACK = {
         "type": "none",
         "value": 0,
         "desc": "効果なし"
-      }
+      },
+      "leaderSkill": "ls_all"
     },
     {
       "id": "n004",
@@ -95,7 +98,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 5,
         "desc": "攻撃時、自身の攻撃力+5"
-      }
+      },
+      "leaderSkill": "ls_second"
     },
     {
       "id": "n005",
@@ -114,7 +118,8 @@ window.CARDS_FALLBACK = {
         "type": "def_up",
         "value": 10,
         "desc": "防御時、自身の防御力+10"
-      }
+      },
+      "leaderSkill": "ls_coin"
     },
     {
       "id": "n006",
@@ -135,7 +140,8 @@ window.CARDS_FALLBACK = {
         "type": "none",
         "value": 0,
         "desc": "効果なし"
-      }
+      },
+      "leaderSkill": "ls_drop"
     },
     {
       "id": "n007",
@@ -157,7 +163,8 @@ window.CARDS_FALLBACK = {
         "type": "none",
         "value": 0,
         "desc": "効果なし"
-      }
+      },
+      "leaderSkill": "ls_atk"
     },
     {
       "id": "n008",
@@ -176,7 +183,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 9,
         "desc": "攻撃時、自身の攻撃力+9"
-      }
+      },
+      "leaderSkill": "ls_def"
     },
     {
       "id": "n009",
@@ -196,7 +204,8 @@ window.CARDS_FALLBACK = {
         "type": "none",
         "value": 0,
         "desc": "効果なし"
-      }
+      },
+      "leaderSkill": "ls_all"
     },
     {
       "id": "n010",
@@ -215,7 +224,8 @@ window.CARDS_FALLBACK = {
         "type": "def_up",
         "value": 14,
         "desc": "防御時、自身の防御力+14"
-      }
+      },
+      "leaderSkill": "ls_second"
     },
     {
       "id": "n011",
@@ -235,7 +245,8 @@ window.CARDS_FALLBACK = {
         "type": "none",
         "value": 0,
         "desc": "効果なし"
-      }
+      },
+      "leaderSkill": "ls_coin"
     },
     {
       "id": "n012",
@@ -255,7 +266,8 @@ window.CARDS_FALLBACK = {
         "type": "pierce",
         "value": 15,
         "desc": "攻撃時、相手の防御力を15%無視"
-      }
+      },
+      "leaderSkill": "ls_drop"
     },
     {
       "id": "r001",
@@ -276,7 +288,8 @@ window.CARDS_FALLBACK = {
         "type": "def_up",
         "value": 16,
         "desc": "防御時、自身の防御力+16"
-      }
+      },
+      "leaderSkill": "ls_atk"
     },
     {
       "id": "r002",
@@ -298,7 +311,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 12,
         "desc": "攻撃時、自身の攻撃力+12"
-      }
+      },
+      "leaderSkill": "ls_def"
     },
     {
       "id": "r003",
@@ -317,7 +331,8 @@ window.CARDS_FALLBACK = {
         "type": "pierce",
         "value": 30,
         "desc": "攻撃時、相手の防御力を30%無視"
-      }
+      },
+      "leaderSkill": "ls_all"
     },
     {
       "id": "r004",
@@ -339,7 +354,8 @@ window.CARDS_FALLBACK = {
         "type": "field_ally_def",
         "value": 6,
         "desc": "登場時、隣接する味方の防御力+6"
-      }
+      },
+      "leaderSkill": "ls_second"
     },
     {
       "id": "r005",
@@ -359,7 +375,8 @@ window.CARDS_FALLBACK = {
         "type": "counter_up",
         "value": 14,
         "desc": "反撃時、自身の攻撃力+14"
-      }
+      },
+      "leaderSkill": "ls_coin"
     },
     {
       "id": "r006",
@@ -380,7 +397,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 8,
         "desc": "攻撃時、自身の攻撃力+8"
-      }
+      },
+      "leaderSkill": "ls_drop"
     },
     {
       "id": "r007",
@@ -401,7 +419,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 11,
         "desc": "攻撃時、自身の攻撃力+11"
-      }
+      },
+      "leaderSkill": "ls_atk"
     },
     {
       "id": "r008",
@@ -422,7 +441,8 @@ window.CARDS_FALLBACK = {
         "type": "guard",
         "value": 1,
         "desc": "防御時、1回だけ攻撃を確実にブロック"
-      }
+      },
+      "leaderSkill": "ls_def"
     },
     {
       "id": "r009",
@@ -443,7 +463,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 10,
         "desc": "攻撃時、自身の攻撃力+10"
-      }
+      },
+      "leaderSkill": "ls_all"
     },
     {
       "id": "sr001",
@@ -465,7 +486,8 @@ window.CARDS_FALLBACK = {
         "type": "chain",
         "value": 1,
         "desc": "勝利時、その方向の先のカードも味方化する"
-      }
+      },
+      "leaderSkill": "ls_second"
     },
     {
       "id": "sr002",
@@ -488,7 +510,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 18,
         "desc": "攻撃時、自身の攻撃力+18"
-      }
+      },
+      "leaderSkill": "ls_coin"
     },
     {
       "id": "sr003",
@@ -508,7 +531,8 @@ window.CARDS_FALLBACK = {
         "type": "pierce",
         "value": 50,
         "desc": "攻撃時、相手の防御力を50%無視"
-      }
+      },
+      "leaderSkill": "ls_drop"
     },
     {
       "id": "sr004",
@@ -527,7 +551,8 @@ window.CARDS_FALLBACK = {
         "type": "def_up",
         "value": 24,
         "desc": "防御時、自身の防御力+24"
-      }
+      },
+      "leaderSkill": "ls_atk"
     },
     {
       "id": "sr005",
@@ -549,7 +574,8 @@ window.CARDS_FALLBACK = {
         "type": "field_ally_def",
         "value": 12,
         "desc": "登場時、隣接する味方の防御力+12"
-      }
+      },
+      "leaderSkill": "ls_def"
     },
     {
       "id": "sr006",
@@ -569,7 +595,8 @@ window.CARDS_FALLBACK = {
         "type": "counter_up",
         "value": 22,
         "desc": "反撃時、自身の攻撃力+22"
-      }
+      },
+      "leaderSkill": "ls_all"
     },
     {
       "id": "sr007",
@@ -591,7 +618,8 @@ window.CARDS_FALLBACK = {
         "type": "atk_up",
         "value": 15,
         "desc": "攻撃時、自身の攻撃力+15"
-      }
+      },
+      "leaderSkill": "ls_second"
     },
     {
       "id": "ssr001",
@@ -617,7 +645,8 @@ window.CARDS_FALLBACK = {
         "value": 1,
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
-      "image": "images/ssr001.webp"
+      "image": "images/ssr001.webp",
+      "leaderSkill": "ls_coin"
     },
     {
       "id": "ssr002",
@@ -641,7 +670,8 @@ window.CARDS_FALLBACK = {
         "value": 26,
         "desc": "攻撃時、自身の攻撃力+26"
       },
-      "image": "images/ssr002.webp"
+      "image": "images/ssr002.webp",
+      "leaderSkill": "ls_drop"
     },
     {
       "id": "ssr003",
@@ -665,7 +695,8 @@ window.CARDS_FALLBACK = {
         "value": 30,
         "desc": "防御時、自身の防御力+30"
       },
-      "image": "images/ssr003.webp"
+      "image": "images/ssr003.webp",
+      "leaderSkill": "ls_atk"
     },
     {
       "id": "ssr004",
@@ -691,7 +722,8 @@ window.CARDS_FALLBACK = {
         "value": 60,
         "desc": "攻撃時、相手の防御力を60%無視"
       },
-      "image": "images/ssr004.webp"
+      "image": "images/ssr004.webp",
+      "leaderSkill": "ls_def"
     },
     {
       "id": "ssr005",
@@ -715,7 +747,8 @@ window.CARDS_FALLBACK = {
         "value": 20,
         "desc": "登場時、隣接する味方の防御力+20"
       },
-      "image": "images/ssr005.webp"
+      "image": "images/ssr005.webp",
+      "leaderSkill": "ls_all"
     },
     {
       "id": "ur001",
@@ -743,7 +776,8 @@ window.CARDS_FALLBACK = {
         "value": 1,
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
-      "image": "images/ur001.webp"
+      "image": "images/ur001.webp",
+      "leaderSkill": "ls_all"
     },
     {
       "id": "ur002",
@@ -769,7 +803,8 @@ window.CARDS_FALLBACK = {
         "value": 70,
         "desc": "攻撃時、相手の防御力を70%無視"
       },
-      "image": "images/ur002.webp"
+      "image": "images/ur002.webp",
+      "leaderSkill": "ls_all"
     },
     {
       "id": "ur003",
@@ -795,7 +830,8 @@ window.CARDS_FALLBACK = {
         "value": 30,
         "desc": "攻撃時、自身の攻撃力+30"
       },
-      "image": "images/ur003.webp"
+      "image": "images/ur003.webp",
+      "leaderSkill": "ls_all"
     }
   ]
 };
