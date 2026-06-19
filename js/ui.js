@@ -77,7 +77,7 @@
       $("view-" + view)?.classList.add("active");
       document.querySelectorAll("#nav button").forEach((b) => b.classList.toggle("active", b.dataset.view === view));
       const map = {
-        home: this.renderHome, gacha: () => {}, collection: this.renderCollection,
+        home: this.renderHome, gacha: () => {}, collection: this.renderCollection, dex: this.renderDex,
         deck: this.renderDeck, fusion: this.renderFusion, dungeon: this.renderDungeon,
         quest: this.renderQuests, skills: this.renderSkills,
         arena: this.renderArena, ranking: this.renderRanking, battle: () => {},
@@ -154,8 +154,8 @@
           <div class="card-inner"><div class="fr-illust"><div class="cart">${icon}</div></div>
           <div class="fr-name">${label}</div><div class="fr-stats" style="justify-content:center"><b style="font-size:16px;font-family:'Cinzel',serif">${val}</b></div></div></div>`;
       const leaderHTML = leader
-        ? `<div class="leader-card">${cardHTML(leader)}</div>`
-        : `<div class="leader-empty">👑<br><span class="muted">デッキにリーダーを設定すると<br>ここに表示されます</span></div>`;
+        ? `<div class="leader-card" data-go="deck" title="クリックでデッキ編成へ">${cardHTML(leader)}</div>`
+        : `<div class="leader-empty" data-go="deck">👑<br><span class="muted">タップしてデッキで<br>リーダーを設定</span></div>`;
       const lsLine = leader && leader.leaderSkill ? `<div class="ls-line">👑 ${leader.leaderSkill.name}：${Data.leaderDesc(leader.leaderSkill, leader.leaderSkill.level)} <span class="muted">(Lv.${leader.leaderSkill.level})</span></div>` : "";
       $("homeBody").innerHTML = `
         <div class="home-hero">
@@ -229,9 +229,18 @@
         }
       });
       const favBtn = $("colFav"); if (favBtn) favBtn.classList.toggle("primary", this.collFavOnly);
-      $("colCount").textContent = `所持 ${Store.state.owned.length} 枚 / 表示 ${groups.length} 種`;
-      if (groups.length === 0) { grid.innerHTML = `<div class="empty-note">該当するカードがありません。</div>`; return; }
-      grid.innerHTML = groups.map((g) => cardHTML(g.card, { qty: g.insts.length, selectable: true, favKey: g.key, favActive: g.anyFav, data: `data-key="${g.key}"` })).join("");
+      // レア別保有枚数サマリー
+      const rc = {};
+      ["UR", "SSR", "SR", "R", "N"].forEach((r) => (rc[r] = 0));
+      Store.state.owned.forEach((o) => { const r = Data.byId[o.id] && Data.byId[o.id].rarity; if (r in rc) rc[r]++; });
+      const summary = `<div class="rarity-summary">${["UR", "SSR", "SR", "R", "N"].map((r) => `<span class="rs-chip rs-${r}"><b>${r}</b> ${rc[r]}枚</span>`).join("")}<span class="rs-chip rs-total">合計 ${Store.state.owned.length}枚</span></div>`;
+      $("colCount").textContent = `表示 ${groups.length} 種`;
+      if (groups.length === 0) { grid.innerHTML = `<div class="empty-note">該当するカードがありません。</div>`; }
+      else grid.innerHTML = groups.map((g) => cardHTML(g.card, { qty: g.insts.length, selectable: true, favKey: g.key, favActive: g.anyFav, data: `data-key="${g.key}"` })).join("");
+      // サマリーをグリッド上部に差し込み
+      let sumEl = document.getElementById("raritySummary");
+      if (!sumEl) { sumEl = document.createElement("div"); sumEl.id = "raritySummary"; grid.parentNode.insertBefore(sumEl, grid); }
+      sumEl.innerHTML = summary;
       grid.querySelectorAll(".fav-btn").forEach((b) => (b.onclick = (e) => {
         e.stopPropagation();
         const g = UI.groups().find((x) => x.key === b.dataset.fav); if (!g) return;
@@ -289,6 +298,25 @@
     /* ---------- DECK ---------- */
     renderDeck() {
       this.renderDeckPresets();
+      // リーダーバナー
+      const banner = $("deckLeaderBanner");
+      if (banner) {
+        const leader = Store.leaderCard ? Store.leaderCard() : null;
+        if (leader) {
+          const ls = leader.leaderSkill;
+          banner.innerHTML = `<div class="leader-banner">
+            <div class="lb-card">${cardHTML(leader, { mini: true })}</div>
+            <div class="lb-info">
+              <div class="lb-title">👑 リーダー：${leader.name}</div>
+              ${ls
+                ? `<div class="lb-skill"><b>${ls.name}</b>　${Data.leaderDesc(ls, ls.level)} <span class="muted">(Lv.${ls.level})</span></div>
+                   <div class="muted" style="font-size:11px">${ls.desc}（試合中ずっとデッキ全体に作用）</div>`
+                : `<div class="muted">このカードはリーダースキルを持ちません。<br>リーダースキルは <b>SSR以上</b>のカードが保有しています。</div>`}
+            </div></div>`;
+        } else {
+          banner.innerHTML = `<div class="leader-banner empty"><div class="muted">デッキにカードを入れて「👑設定」でリーダーを決めましょう。先頭がリーダーになります。</div></div>`;
+        }
+      }
       const slots = $("deckSlots");
       slots.innerHTML = "";
       for (let i = 0; i < 6; i++) {
@@ -701,63 +729,71 @@
     renderUpgrade() {
       const tiers = { N: "R", R: "SR", SR: "SSR", SSR: "UR" };
       const fs = this.fuseState;
-      $("fuseDesc").textContent = "同レアを規定数まとめて上位レアを1枚生成";
-      const baseInst = fs.base ? this.instById(fs.base) : null;
-      const baseRarity = baseInst ? Data.byId[baseInst.id].rarity : null;
-      const need = baseRarity ? Data.FUSE_UPGRADE_COUNT[baseRarity] : null;
-      const target = baseRarity ? tiers[baseRarity] : null;
-      const chosen = [fs.base, ...fs.mats].filter(Boolean);
-      const ready = baseRarity && chosen.length === need;
-      const targetPool = target ? Data.cards.filter((c) => c.rarity === target) : [];
-      $("fuseArea").innerHTML = `
-        <p class="muted">必要数：N×3 / R×3 / SR×4 → SSR / SSR×5 → UR</p>
-        <div class="row" style="margin:8px 0">
-          ${baseRarity ? `<b>${baseRarity} ${chosen.length}/${need} 枚選択中</b> → 生成: ${target}` : "<b>昇華したいレアのカードを選んでください</b>"}
-          <span class="spacer"></span><button class="ghost" id="clearSel">選択クリア</button>
-        </div>
-        ${ready ? `<div class="row" style="margin-bottom:12px"><b>生成するカードを選択：</b></div>
-          <div class="reveal-grid" id="targetPool">${targetPool.map((c) => cardHTML(Store.materialize({ id: c.id, level: 1, marks: c.marks, extraSkills: [] }), { selectable: true, noMarks: true, data: `data-tid="${c.id}"` })).join("")}</div>` : ""}
-        <div class="row" style="margin:10px 0 4px">
-          ${baseRarity && !ready ? `<button id="upAuto">おまかせで${need}枚そろえる</button>` : ""}
-          <span class="muted" style="font-size:11px">🔒 デッキ編成中・お気に入りのカードは対象外です</span>
-        </div>
-        <div class="toolbar" style="margin-top:6px"><b>素材を選択：</b></div>
-        <div class="card-grid" id="fusePool"></div>`;
-      $("clearSel").onclick = () => { fs.base = null; fs.mats = []; UI.renderUpgrade(); };
-      const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
-      $("fusePool").innerHTML = groups.map((g) => {
-        const selCount = g.insts.filter((i) => chosen.includes(i.uid)).length;
-        const matchRar = !baseRarity || g.card.rarity === baseRarity;
-        const protectedAll = g.insts.every((i) => Store.isProtected(i.uid) && !chosen.includes(i.uid));
-        return cardHTML(g.card, { qty: g.insts.length, selectable: matchRar && !protectedAll, dim: !matchRar || protectedAll, selected: selCount > 0, locked: protectedAll, data: `data-key="${g.key}"` });
+      if (!fs.targetFrom) fs.targetFrom = null; // 素材レア
+      $("fuseDesc").textContent = "作りたいレアを選ぶと素材が自動選択されます（生成カードはランダム）";
+
+      // 各レアの保有数（保護除外で素材にできる枚数）
+      const fromRarities = ["N", "R", "SR", "SSR"];
+      const counts = {};
+      fromRarities.forEach((r) => {
+        const need = Data.FUSE_UPGRADE_COUNT[r];
+        const avail = Store.state.owned.filter((o) => Data.byId[o.id].rarity === r && !Store.isProtected(o.uid));
+        counts[r] = { need, have: avail.length, uids: avail.map((o) => o.uid) };
+      });
+
+      const tiles = fromRarities.map((r) => {
+        const c = counts[r], ok = c.have >= c.need, sel = fs.targetFrom === r;
+        return `<button class="up-tier ${sel ? "sel" : ""}" data-from="${r}" ${ok ? "" : "disabled"}>
+          <div class="ut-target">${tiers[r]} を生成</div>
+          <div class="ut-need">${r} ×${c.need} を消費</div>
+          <div class="ut-have ${ok ? "ok" : "ng"}">素材 ${c.have}/${c.need}${ok ? "" : "（不足）"}</div>
+        </button>`;
       }).join("");
-      $("fusePool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
-        const g = groups.find((x) => x.key === el.dataset.key);
-        const r = g.card.rarity;
-        if (baseRarity && r !== baseRarity) { UI.toast("同じレアリティで揃えてください"); return; }
-        const avail = g.insts.find((i) => !chosen.includes(i.uid) && !Store.isProtected(i.uid));
-        if (!avail) { UI.toast("選べる素材がありません（保護中の可能性）"); return; }
-        if (!fs.base) fs.base = avail.uid;
-        else { const cap = Data.FUSE_UPGRADE_COUNT[baseRarity || r]; if (chosen.length >= cap) { UI.toast(`${cap}枚までです`); return; } fs.mats.push(avail.uid); }
-        UI.renderUpgrade();
+
+      const from = fs.targetFrom;
+      const picked = from && counts[from].have >= counts[from].need ? counts[from].uids.slice(0, counts[from].need) : [];
+      const target = from ? tiers[from] : null;
+
+      $("fuseArea").innerHTML = `
+        <p class="muted">同じレアを規定数まとめると上位レアが <b>1枚ランダム</b>で生成されます。<br>生成カードは選べませんが、同じレアの中でも<b>出現率の低い激レア</b>が当たることがあります。</p>
+        <div class="up-tier-grid">${tiles}</div>
+        <p class="muted" style="font-size:11px;margin-top:8px">🔒 デッキ編成中・お気に入りのカードは素材から自動で除外されます。</p>
+        ${from ? `
+          <div class="up-confirm">
+            <div class="muted" style="margin-bottom:8px">自動選択された素材（${from} ×${picked.length}）：</div>
+            <div class="up-mat-row">${picked.map((u) => { const c = Store.materialize(Store.getInstance(u)); return cardHTML(c, { mini: true }); }).join("")}</div>
+            <div class="row" style="margin-top:12px">
+              <button class="gold" id="doUpgrade">${target} をランダム生成する</button>
+              <button class="ghost" id="upReselect">選び直す</button>
+            </div>
+          </div>` : `<p class="muted" style="margin-top:14px">上のボタンから作りたいレアを選んでください。</p>`}`;
+
+      $("fuseArea").querySelectorAll("[data-from]").forEach((b) => (b.onclick = () => {
+        fs.targetFrom = b.dataset.from; UI.renderUpgrade();
       }));
-      const upAuto = $("upAuto");
-      if (upAuto) upAuto.onclick = () => {
-        const pool = Store.state.owned.filter((o) => Data.byId[o.id].rarity === baseRarity && !Store.isProtected(o.uid) && !chosen.includes(o.uid)).map((o) => o.uid);
-        const all = [...chosen, ...pool].slice(0, need);
-        if (all.length < need) { UI.toast(`${baseRarity}の素材が足りません（保護カードを除く）`); }
-        fs.base = all[0] || fs.base; fs.mats = all.slice(1); UI.renderUpgrade();
+      const re = $("upReselect"); if (re) re.onclick = () => { fs.targetFrom = null; UI.renderUpgrade(); };
+      const du = $("doUpgrade");
+      if (du) du.onclick = () => {
+        if (picked.length < counts[from].need) { UI.toast("素材が不足しています"); return; }
+        const r = Store.upgradeFuse(picked, target);
+        if (!r.ok) { UI.toast(r.reason); return; }
+        if (window.Quest) Quest.bump("fusion");
+        UI.fuseState = { mode: "upgrade", base: null, mats: [], targetFrom: null };
+        UI.afterChange();
+        UI.upgradeReveal(r.card);
       };
-      if (ready) {
-        $("targetPool").querySelectorAll("[data-tid]").forEach((el) => (el.onclick = () => {
-          const tid = el.dataset.tid;
-          chosen.forEach((uid) => Store.removeCard(uid));
-          Store.addCard(tid);
-          UI.fuseState = { mode: "upgrade", base: null, mats: [] };
-          if (window.Quest) Quest.bump("fusion");
-          UI.afterChange(); UI.toast(`昇華成功：${Data.byId[tid].name} を入手！`); UI.renderFusion();
-        }));
-      }
+    },
+
+    // 生成結果の演出（ランダム）
+    upgradeReveal(card) {
+      const mc = Store.materialize({ id: card.id, level: 1, marks: card.marks.slice(), extraSkills: [] });
+      const rare = (card.weight || 100) <= 35;
+      UI.modal({
+        title: rare ? "✨ 激レア出現！ ✨" : "🎉 上位レア生成成功！",
+        body: `<p class="muted" style="text-align:center">生成されたカード${rare ? "（出現率が低い激レアカードです！）" : ""}</p>
+          <div class="reveal-grid" style="justify-content:center">${cardHTML(mc)}</div>`,
+        actions: [{ label: "確認", primary: true, onClick: () => { UI.closeModal(); UI.renderFusion(); } }],
+      });
     },
 
     /* ---------- DUNGEON ---------- */
@@ -833,11 +869,15 @@
     },
 
     /* ---------- QUEST ---------- */
+    showClaimedQuests: false,
     renderQuests() {
       if (!window.Quest) { $("questBody").innerHTML = '<div class="empty-note">クエストを読み込めませんでした。</div>'; return; }
       Quest.checkReset();
+      const showClaimed = this.showClaimedQuests;
       const section = (title, sub, list) => {
-        const rows = list.map((x) => {
+        const visible = list.filter((x) => showClaimed || !Quest.isClaimed(x.id));
+        if (visible.length === 0) return "";
+        const rows = visible.map((x) => {
           const prog = Quest.progress(x.id), done = prog >= x.goal, claimed = Quest.isClaimed(x.id);
           const pct = Math.min(100, (prog / x.goal) * 100);
           return `<div class="quest ${claimed ? "claimed" : done ? "done" : ""}">
@@ -853,12 +893,20 @@
         return `<div class="quest-section"><h3>${title} <span class="muted" style="font-weight:400">${sub}</span></h3>${rows}</div>`;
       };
       const claimable = Quest.claimable();
+      const claimedCount = ["start", "daily", "weekly", "achievement"].reduce((a, k) => a + Quest.list(k).filter((x) => Quest.isClaimed(x.id)).length, 0);
       $("questBody").innerHTML =
-        `<div class="claim-all-bar"><span>受け取れる報酬：<b>${claimable}</b> 件</span><button class="gold" id="claimAllBtn" ${claimable ? "" : "disabled"}>まとめて受け取る</button></div>` +
+        `<div class="claim-all-bar">
+           <span>受け取れる報酬：<b>${claimable}</b> 件</span>
+           <span class="spacer"></span>
+           <button class="ghost" id="toggleClaimed">${showClaimed ? "受領済みを隠す" : `受領済みを表示(${claimedCount})`}</button>
+           <button class="gold" id="claimAllBtn" ${claimable ? "" : "disabled"}>まとめて受け取る</button>
+         </div>` +
         section("🔰 序盤ミッション", "ゲームに慣れながら報酬ゲット", Quest.list("start")) +
         section("デイリー", "毎日0時にリセット", Quest.list("daily")) +
         section("ウィークリー", "毎週リセット", Quest.list("weekly")) +
-        section("実績", "一度だけ達成できます", Quest.list("achievement"));
+        section("実績", "一度だけ達成できます", Quest.list("achievement")) ||
+        '<div class="empty-note">表示できるクエストがありません。</div>';
+      const tc = $("toggleClaimed"); if (tc) tc.onclick = () => { UI.showClaimedQuests = !UI.showClaimedQuests; UI.renderQuests(); };
       const cab = $("claimAllBtn");
       if (cab) cab.onclick = () => {
         const r = Quest.claimAll();
@@ -872,7 +920,60 @@
       }));
     },
 
-    /* ---------- SKILL GUIDE（図解） ---------- */
+    /* ---------- CARD DEX（図鑑） ---------- */
+    ownedCountById(id) { return Store.state.owned.filter((o) => o.id === id).length; },
+    renderDex() {
+      const rarities = ["UR", "SSR", "SR", "R", "N"];
+      const all = Data.cards.slice();
+      const totalAll = all.length;
+      const ownedKinds = all.filter((c) => this.ownedCountById(c.id) > 0).length;
+      const pct = Math.round((ownedKinds / totalAll) * 100);
+      const head = `
+        <div class="dex-progress">
+          <div class="dex-prog-top"><b>コンプリート率</b><span class="dex-pct ${pct === 100 ? "done" : ""}">${pct}%</span></div>
+          <div class="dex-bar"><i style="width:${pct}%"></i></div>
+          <div class="muted">${ownedKinds} / ${totalAll} 種 を収集${pct === 100 ? " 🎉 全コンプ達成！" : ""}</div>
+        </div>`;
+      const sections = rarities.map((r) => {
+        const list = all.filter((c) => c.rarity === r);
+        const own = list.filter((c) => this.ownedCountById(c.id) > 0).length;
+        const cells = list.map((c) => {
+          const cnt = this.ownedCountById(c.id);
+          if (cnt > 0) {
+            const card = Store.materialize({ id: c.id, level: 1, marks: c.marks.slice(), extraSkills: [] });
+            return `<div class="dex-cell owned" data-dex="${c.id}">${cardHTML(card, { mini: true, noMarks: true })}<div class="dex-have">×${cnt}</div></div>`;
+          }
+          return `<div class="dex-cell locked rar-${r}"><div class="dex-q">？</div><div class="dex-qname">？？？</div></div>`;
+        }).join("");
+        const complete = own === list.length;
+        return `<div class="dex-section">
+          <h3 class="dex-rhead rar-${r}">${r} <span class="muted">${own}/${list.length}</span> ${complete ? '<span class="dex-complete">COMPLETE!</span>' : ""}</h3>
+          <div class="dex-grid">${cells}</div></div>`;
+      }).join("");
+      $("dexBody").innerHTML = head + sections;
+      $("dexBody").querySelectorAll("[data-dex]").forEach((el) => (el.onclick = () => UI.dexDetail(el.dataset.dex)));
+    },
+    dexDetail(id) {
+      const c = Data.byId[id]; if (!c) return;
+      const cnt = this.ownedCountById(id);
+      const card = Store.materialize({ id, level: 1, marks: c.marks.slice(), extraSkills: [] });
+      const lsTxt = card.leaderSkill ? `<p>👑 リーダースキル：<b>${card.leaderSkill.name}</b>（${Data.leaderDesc(card.leaderSkill, 1)}）</p>` : '<p class="muted">リーダースキルなし（SSR以上が保有）</p>';
+      UI.modal({
+        title: `No.${id} ${c.name}`,
+        body: `<div class="dex-detail">
+            <div class="dex-detail-card">${cardHTML(card, { noMarks: false })}</div>
+            <div class="dex-detail-info">
+              <p><span class="rs-chip rs-${c.rarity}"><b>${c.rarity}</b></span> 　所持 <b>${cnt}</b> 枚</p>
+              <p>基礎 ⚔${c.baseAtk} / 🛡${c.baseDef}</p>
+              <p>攻撃マーク：${c.marks.join(" ")}</p>
+              <p>${skillLine(card)}</p>
+              ${lsTxt}
+              <p class="muted">${c.weight && c.weight <= 35 ? "★出現率の低い激レアカード" : ""}</p>
+            </div>
+          </div>`,
+        actions: [{ label: "閉じる", primary: true, onClick: () => UI.closeModal() }],
+      });
+    },
     miniBoard(cells, cap) {
       // cells: 9要素（3x3）。各要素 {t:'ally'|'enemy'|'empty'|'block'|'ally2'|'enemy2', a:'矢印', fx:'flip'|'pulse'|'down'|'mark'}
       const cell = (c) => {

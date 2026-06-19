@@ -27,6 +27,7 @@
     <button data-view="home" class="active">ホーム</button>
     <button data-view="gacha">ガチャ</button>
     <button data-view="collection">所持カード</button>
+    <button data-view="dex">図鑑</button>
     <button data-view="deck">デッキ編成</button>
     <button data-view="fusion">合成</button>
     <button data-view="dungeon">ダンジョン</button>
@@ -104,6 +105,7 @@
     <section class="view" id="view-deck">
       <div class="section-title"><h2>デッキ編成</h2><p>6枚を編成（試合は5枚設置・1枚控え）。デッキ構成は最大5つまで保存できます</p></div>
       <div id="deckPresets"></div>
+      <div id="deckLeaderBanner"></div>
       <div class="deck-slots" id="deckSlots"></div>
       <div class="toolbar"><span class="muted">下のカードをタップで編成に追加 / 上のスロットをタップで外す</span></div>
       <div class="card-grid" id="deckPool"></div>
@@ -129,6 +131,12 @@
       </div>
       <div class="toolbar"><b>素材選択：</b><span class="muted" id="fuseMode">ベース選択中</span></div>
       <div class="card-grid" id="fusionPool"></div>
+    </section>
+
+    <!-- DEX -->
+    <section class="view" id="view-dex">
+      <div class="section-title"><h2>カード図鑑</h2><p>集めたカードがここに記録されます。コンプリートを目指そう！</p></div>
+      <div id="dexBody"></div>
     </section>
 
     <!-- SKILLS -->

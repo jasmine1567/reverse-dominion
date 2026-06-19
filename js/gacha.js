@@ -5,8 +5,8 @@
     rare: { single: 5, multi: 45, currency: "diamonds" },
   };
   const RATES = {
-    normal: [{ r: "N", w: 75 }, { r: "R", w: 20 }, { r: "SR", w: 5 }],
-    rare: [{ r: "R", w: 60 }, { r: "SR", w: 40 }],
+    normal: [{ r: "N", w: 79.5 }, { r: "R", w: 20 }, { r: "SR", w: 0.5 }],
+    rare: [{ r: "R", w: 59.5 }, { r: "SR", w: 40 }, { r: "SSR", w: 0.5 }],
   };
 
   function eligible(rarity) {

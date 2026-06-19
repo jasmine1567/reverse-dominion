@@ -125,6 +125,14 @@
     },
 
     /* ---- お気に入り ---- */
+    upgradeFuse(uids, targetRarity) {
+      const valid = uids.filter((u) => this.getInstance(u));
+      const card = Data.randomCardByRarity(targetRarity);
+      if (!card) return { ok: false, reason: "生成先がありません" };
+      valid.forEach((u) => this.removeCard(u));
+      this.addCard(card.id);
+      return { ok: true, card };
+    },
     toggleFavInsts(uids, val) { uids.forEach((u) => { const i = this.getInstance(u); if (i) i.fav = (val === undefined ? !i.fav : !!val); }); this.save(); },
     isFav(uid) { const i = this.getInstance(uid); return !!(i && i.fav); },
     inAnyDeck(uid) {
@@ -188,7 +196,12 @@
       return "ok";
     },
     deckCards() { return this.state.deck.map((u) => this.resolveCard(u)).filter(Boolean); },
-    setLeader(uid) { if (this.state.deck.includes(uid)) { this.state.leaderUid = uid; this.save(); return true; } return false; },
+    setLeader(uid) {
+      if (!this.state.deck.includes(uid)) return false;
+      this.state.leaderUid = uid;
+      this.state.deck = [uid, ...this.state.deck.filter((u) => u !== uid)];
+      this.save(); return true;
+    },
     leaderCard() { const u = this.state.leaderUid; return (u && this.state.deck.includes(u)) ? this.resolveCard(u) : (this.state.deck[0] ? this.resolveCard(this.state.deck[0]) : null); },
 
     /* ---- 機能解放 ---- */

@@ -111,6 +111,16 @@
       return null;
     },
     rarityRank(r) { return RARITY_ORDER[r] ?? 0; },
+    cardsOfRarity(r) { return this.cards.filter((c) => c.rarity === r); },
+    // 同レア内で weight（低いほどレア）に従ってランダムに1枚返す
+    randomCardByRarity(r) {
+      const pool = this.cardsOfRarity(r);
+      if (!pool.length) return null;
+      const total = pool.reduce((a, c) => a + (c.weight || 100), 0);
+      let n = Math.random() * total;
+      for (const c of pool) { const w = c.weight || 100; if (n < w) return c; n -= w; }
+      return pool[pool.length - 1];
+    },
   };
 
   window.Data = Data;

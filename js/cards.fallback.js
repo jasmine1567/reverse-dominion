@@ -34,7 +34,7 @@ window.CARDS_FALLBACK = {
         "value": 0,
         "desc": "効果なし"
       },
-      "leaderSkill": "ls_atk"
+      "weight": 100
     },
     {
       "id": "n002",
@@ -56,7 +56,7 @@ window.CARDS_FALLBACK = {
         "value": 6,
         "desc": "攻撃時、自身の攻撃力+6"
       },
-      "leaderSkill": "ls_def"
+      "weight": 100
     },
     {
       "id": "n003",
@@ -77,7 +77,7 @@ window.CARDS_FALLBACK = {
         "value": 0,
         "desc": "効果なし"
       },
-      "leaderSkill": "ls_all"
+      "weight": 70
     },
     {
       "id": "n004",
@@ -99,7 +99,7 @@ window.CARDS_FALLBACK = {
         "value": 5,
         "desc": "攻撃時、自身の攻撃力+5"
       },
-      "leaderSkill": "ls_second"
+      "weight": 100
     },
     {
       "id": "n005",
@@ -119,7 +119,7 @@ window.CARDS_FALLBACK = {
         "value": 10,
         "desc": "防御時、自身の防御力+10"
       },
-      "leaderSkill": "ls_coin"
+      "weight": 70
     },
     {
       "id": "n006",
@@ -141,7 +141,7 @@ window.CARDS_FALLBACK = {
         "value": 0,
         "desc": "効果なし"
       },
-      "leaderSkill": "ls_drop"
+      "weight": 100
     },
     {
       "id": "n007",
@@ -164,7 +164,7 @@ window.CARDS_FALLBACK = {
         "value": 0,
         "desc": "効果なし"
       },
-      "leaderSkill": "ls_atk"
+      "weight": 100
     },
     {
       "id": "n008",
@@ -184,7 +184,7 @@ window.CARDS_FALLBACK = {
         "value": 9,
         "desc": "攻撃時、自身の攻撃力+9"
       },
-      "leaderSkill": "ls_def"
+      "weight": 100
     },
     {
       "id": "n009",
@@ -205,7 +205,7 @@ window.CARDS_FALLBACK = {
         "value": 0,
         "desc": "効果なし"
       },
-      "leaderSkill": "ls_all"
+      "weight": 100
     },
     {
       "id": "n010",
@@ -225,7 +225,7 @@ window.CARDS_FALLBACK = {
         "value": 14,
         "desc": "防御時、自身の防御力+14"
       },
-      "leaderSkill": "ls_second"
+      "weight": 100
     },
     {
       "id": "n011",
@@ -246,7 +246,7 @@ window.CARDS_FALLBACK = {
         "value": 0,
         "desc": "効果なし"
       },
-      "leaderSkill": "ls_coin"
+      "weight": 100
     },
     {
       "id": "n012",
@@ -267,7 +267,7 @@ window.CARDS_FALLBACK = {
         "value": 15,
         "desc": "攻撃時、相手の防御力を15%無視"
       },
-      "leaderSkill": "ls_drop"
+      "weight": 100
     },
     {
       "id": "r001",
@@ -289,7 +289,7 @@ window.CARDS_FALLBACK = {
         "value": 16,
         "desc": "防御時、自身の防御力+16"
       },
-      "leaderSkill": "ls_atk"
+      "weight": 70
     },
     {
       "id": "r002",
@@ -312,7 +312,7 @@ window.CARDS_FALLBACK = {
         "value": 12,
         "desc": "攻撃時、自身の攻撃力+12"
       },
-      "leaderSkill": "ls_def"
+      "weight": 100
     },
     {
       "id": "r003",
@@ -332,7 +332,7 @@ window.CARDS_FALLBACK = {
         "value": 30,
         "desc": "攻撃時、相手の防御力を30%無視"
       },
-      "leaderSkill": "ls_all"
+      "weight": 100
     },
     {
       "id": "r004",
@@ -355,7 +355,7 @@ window.CARDS_FALLBACK = {
         "value": 6,
         "desc": "登場時、隣接する味方の防御力+6"
       },
-      "leaderSkill": "ls_second"
+      "weight": 70
     },
     {
       "id": "r005",
@@ -376,7 +376,7 @@ window.CARDS_FALLBACK = {
         "value": 14,
         "desc": "反撃時、自身の攻撃力+14"
       },
-      "leaderSkill": "ls_coin"
+      "weight": 100
     },
     {
       "id": "r006",
@@ -398,7 +398,7 @@ window.CARDS_FALLBACK = {
         "value": 8,
         "desc": "攻撃時、自身の攻撃力+8"
       },
-      "leaderSkill": "ls_drop"
+      "weight": 100
     },
     {
       "id": "r007",
@@ -420,7 +420,7 @@ window.CARDS_FALLBACK = {
         "value": 11,
         "desc": "攻撃時、自身の攻撃力+11"
       },
-      "leaderSkill": "ls_atk"
+      "weight": 100
     },
     {
       "id": "r008",
@@ -442,7 +442,7 @@ window.CARDS_FALLBACK = {
         "value": 1,
         "desc": "防御時、1回だけ攻撃を確実にブロック"
       },
-      "leaderSkill": "ls_def"
+      "weight": 100
     },
     {
       "id": "r009",
@@ -464,7 +464,7 @@ window.CARDS_FALLBACK = {
         "value": 10,
         "desc": "攻撃時、自身の攻撃力+10"
       },
-      "leaderSkill": "ls_all"
+      "weight": 100
     },
     {
       "id": "sr001",
@@ -487,7 +487,7 @@ window.CARDS_FALLBACK = {
         "value": 1,
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
-      "leaderSkill": "ls_second"
+      "weight": 70
     },
     {
       "id": "sr002",
@@ -511,7 +511,7 @@ window.CARDS_FALLBACK = {
         "value": 18,
         "desc": "攻撃時、自身の攻撃力+18"
       },
-      "leaderSkill": "ls_coin"
+      "weight": 100
     },
     {
       "id": "sr003",
@@ -532,7 +532,7 @@ window.CARDS_FALLBACK = {
         "value": 50,
         "desc": "攻撃時、相手の防御力を50%無視"
       },
-      "leaderSkill": "ls_drop"
+      "weight": 100
     },
     {
       "id": "sr004",
@@ -552,7 +552,7 @@ window.CARDS_FALLBACK = {
         "value": 24,
         "desc": "防御時、自身の防御力+24"
       },
-      "leaderSkill": "ls_atk"
+      "weight": 70
     },
     {
       "id": "sr005",
@@ -575,7 +575,7 @@ window.CARDS_FALLBACK = {
         "value": 12,
         "desc": "登場時、隣接する味方の防御力+12"
       },
-      "leaderSkill": "ls_def"
+      "weight": 100
     },
     {
       "id": "sr006",
@@ -596,7 +596,7 @@ window.CARDS_FALLBACK = {
         "value": 22,
         "desc": "反撃時、自身の攻撃力+22"
       },
-      "leaderSkill": "ls_all"
+      "weight": 100
     },
     {
       "id": "sr007",
@@ -619,7 +619,7 @@ window.CARDS_FALLBACK = {
         "value": 15,
         "desc": "攻撃時、自身の攻撃力+15"
       },
-      "leaderSkill": "ls_second"
+      "weight": 100
     },
     {
       "id": "ssr001",
@@ -646,7 +646,8 @@ window.CARDS_FALLBACK = {
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
       "image": "images/ssr001.svg",
-      "leaderSkill": "ls_coin"
+      "leaderSkill": "ls_atk",
+      "weight": 35
     },
     {
       "id": "ssr002",
@@ -671,7 +672,8 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、自身の攻撃力+26"
       },
       "image": "images/ssr002.svg",
-      "leaderSkill": "ls_drop"
+      "leaderSkill": "ls_def",
+      "weight": 100
     },
     {
       "id": "ssr003",
@@ -696,7 +698,8 @@ window.CARDS_FALLBACK = {
         "desc": "防御時、自身の防御力+30"
       },
       "image": "images/ssr003.svg",
-      "leaderSkill": "ls_atk"
+      "leaderSkill": "ls_all",
+      "weight": 15
     },
     {
       "id": "ssr004",
@@ -723,7 +726,8 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、相手の防御力を60%無視"
       },
       "image": "images/ssr004.svg",
-      "leaderSkill": "ls_def"
+      "leaderSkill": "ls_second",
+      "weight": 100
     },
     {
       "id": "ssr005",
@@ -748,7 +752,8 @@ window.CARDS_FALLBACK = {
         "desc": "登場時、隣接する味方の防御力+20"
       },
       "image": "images/ssr005.svg",
-      "leaderSkill": "ls_all"
+      "leaderSkill": "ls_coin",
+      "weight": 70
     },
     {
       "id": "ur001",
@@ -777,7 +782,8 @@ window.CARDS_FALLBACK = {
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
       "image": "images/ur001.svg",
-      "leaderSkill": "ls_all"
+      "leaderSkill": "ls_all",
+      "weight": 35
     },
     {
       "id": "ur002",
@@ -804,7 +810,8 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、相手の防御力を70%無視"
       },
       "image": "images/ur002.svg",
-      "leaderSkill": "ls_all"
+      "leaderSkill": "ls_all",
+      "weight": 70
     },
     {
       "id": "ur003",
@@ -831,7 +838,8 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、自身の攻撃力+30"
       },
       "image": "images/ur003.svg",
-      "leaderSkill": "ls_all"
+      "leaderSkill": "ls_all",
+      "weight": 15
     },
     {
       "id": "n013",
@@ -852,7 +860,7 @@ window.CARDS_FALLBACK = {
         "value": 1,
         "desc": "登場時、自身の攻撃マークがランダムに1つ増える"
       },
-      "leaderSkill": "ls_atk"
+      "weight": 15
     },
     {
       "id": "n014",
@@ -874,7 +882,7 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、一定確率で攻撃力が大きく上昇（Lvで確率↑）",
         "chance": 30
       },
-      "leaderSkill": "ls_second"
+      "weight": 35
     },
     {
       "id": "r010",
@@ -896,7 +904,7 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、一定確率で攻撃力が大きく上昇（Lvで確率↑）",
         "chance": 30
       },
-      "leaderSkill": "ls_atk"
+      "weight": 15
     },
     {
       "id": "r011",
@@ -919,7 +927,7 @@ window.CARDS_FALLBACK = {
         "value": 14,
         "desc": "登場時、隣接する敵カードの防御力を下げる（Lvで効果↑）"
       },
-      "leaderSkill": "ls_def"
+      "weight": 35
     },
     {
       "id": "sr008",
@@ -943,7 +951,7 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃成功時、一定確率でその方向の先のカードも攻撃（Lvで確率↑）",
         "chance": 30
       },
-      "leaderSkill": "ls_all"
+      "weight": 35
     },
     {
       "id": "sr009",
@@ -966,7 +974,7 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃時、一定確率で攻撃力が大きく上昇（Lvで確率↑）",
         "chance": 30
       },
-      "leaderSkill": "ls_second"
+      "weight": 15
     },
     {
       "id": "ssr006",
@@ -990,8 +998,9 @@ window.CARDS_FALLBACK = {
         "desc": "攻撃成功時、一定確率でその方向の先のカードも攻撃（Lvで確率↑）",
         "chance": 40
       },
-      "leaderSkill": "ls_all",
-      "image": "images/ssr006.svg"
+      "leaderSkill": "ls_drop",
+      "image": "images/ssr006.svg",
+      "weight": 70
     },
     {
       "id": "ur004",
@@ -1017,7 +1026,8 @@ window.CARDS_FALLBACK = {
         "desc": "登場時、自身の攻撃マークがランダムに増える（Lvで増加↑）"
       },
       "leaderSkill": "ls_all",
-      "image": "images/ur004.svg"
+      "image": "images/ur004.svg",
+      "weight": 70
     }
   ]
 };

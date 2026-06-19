@@ -901,3 +901,77 @@ table.rank td.num { font-variant-numeric: tabular-nums; text-align: right; }
 .leader-stage::before {
   content: ""; position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; transform: translate(-50%,-50%); z-index: -1;
   background: radial-gradient(circle, rgba(70,212,216,.18), transparent 65%); pointer-events: none; }
+
+/* ============================================================
+   v9: アナウンス固定 / レア別サマリー / 図鑑 / リーダーバナー / 上位レア選択
+   ============================================================ */
+/* ---- 全体アナウンスを「画面を動かさない」オーバーレイに ---- */
+#announceBar { position: fixed; bottom: 14px; left: 0; right: 0; z-index: 60; display: flex; flex-direction: column; align-items: center; gap: 6px; pointer-events: none; min-height: 0; overflow: visible; }
+.announce-item { pointer-events: auto; transform: translateY(160%); border: 1px solid var(--line); border-radius: 999px; max-width: 92vw;
+  box-shadow: 0 8px 24px rgba(0,0,0,.5); border-bottom-width: 1px; }
+.announce-item.show { transform: translateY(0); }
+
+/* ---- レア別保有枚数サマリー ---- */
+.rarity-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 14px; }
+.rs-chip { font-size: 12px; padding: 4px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--ink-3); }
+.rs-chip b { font-family: 'Cinzel', serif; }
+.rs-chip.rs-N b { color: #9aa0aa; } .rs-chip.rs-R b { color: #8fb6e0; }
+.rs-chip.rs-SR b { color: #e6c074; } .rs-chip.rs-SSR b { color: #f0a93a; } .rs-chip.rs-UR b { color: #ff5b8a; }
+.rs-chip.rs-total { background: linear-gradient(120deg, rgba(232,193,90,.16), rgba(70,212,216,.12)); }
+
+/* ---- カード図鑑 ---- */
+.dex-progress { padding: 16px; border-radius: 14px; margin-bottom: 18px;
+  background: radial-gradient(500px 200px at 50% -30%, rgba(70,212,216,.18), transparent), linear-gradient(160deg, var(--ink-3), var(--ink-2)); border: 1px solid var(--line); }
+.dex-prog-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 8px; }
+.dex-pct { font-family: 'Cinzel', serif; font-size: 28px; font-weight: 800; color: var(--cyan); }
+.dex-pct.done { color: var(--gold); text-shadow: 0 0 16px rgba(232,193,90,.6); }
+.dex-bar { height: 12px; border-radius: 7px; background: var(--ink); overflow: hidden; margin-bottom: 8px; border: 1px solid var(--line); }
+.dex-bar > i { display: block; height: 100%; background: linear-gradient(90deg, var(--cyan), var(--gold)); transition: width .6s ease; }
+.dex-section { margin-bottom: 22px; }
+.dex-rhead { display: flex; align-items: center; gap: 10px; font-family: 'Cinzel', serif; padding-bottom: 6px; border-bottom: 1px solid var(--line); margin-bottom: 12px; }
+.dex-rhead.rar-UR { color: #ff5b8a; } .dex-rhead.rar-SSR { color: #f0a93a; } .dex-rhead.rar-SR { color: #e6c074; } .dex-rhead.rar-R { color: #8fb6e0; } .dex-rhead.rar-N { color: #9aa0aa; }
+.dex-complete { font-size: 11px; color: #04121a; background: linear-gradient(90deg, var(--gold), #fff0c0); padding: 2px 10px; border-radius: 999px; font-family: system-ui; font-weight: 800; animation: dexPulse 1.6s ease-in-out infinite; }
+@keyframes dexPulse { 0%,100% { box-shadow: 0 0 0 rgba(232,193,90,0); } 50% { box-shadow: 0 0 14px rgba(232,193,90,.8); } }
+.dex-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(108px, 1fr)); gap: 12px; }
+.dex-cell { position: relative; cursor: pointer; transition: transform .15s; }
+.dex-cell.owned:hover { transform: translateY(-4px); }
+.dex-have { position: absolute; right: 6px; bottom: 6px; z-index: 7; font-size: 11px; background: rgba(8,10,16,.85); border: 1px solid var(--line); border-radius: 999px; padding: 1px 7px; }
+.dex-cell.locked { border-radius: 12px; border: 1px dashed var(--line); background: var(--ink-2); aspect-ratio: 0.72; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; opacity: .8; }
+.dex-cell.locked .dex-q { font-size: 40px; color: #3a4150; font-family: 'Cinzel', serif; }
+.dex-cell.locked .dex-qname { font-size: 11px; color: var(--text-dim); }
+.dex-cell.locked.rar-SSR { border-color: rgba(240,169,58,.3); } .dex-cell.locked.rar-UR { border-color: rgba(255,91,138,.3); }
+.dex-detail { display: flex; gap: 18px; flex-wrap: wrap; }
+.dex-detail-card { width: 200px; flex: 0 0 auto; margin: 0 auto; }
+.dex-detail-info { flex: 1; min-width: 220px; }
+.dex-detail-info p { margin: 6px 0; }
+
+/* ---- リーダーバナー（デッキ編成） ---- */
+.leader-banner { display: flex; gap: 16px; align-items: center; padding: 14px; border-radius: 14px; margin-bottom: 16px;
+  background: radial-gradient(400px 160px at 14% -30%, rgba(232,193,90,.2), transparent), linear-gradient(160deg, var(--ink-3), var(--ink-2)); border: 1px solid var(--gold); }
+.leader-banner.empty { border-color: var(--line); }
+.lb-card { width: 110px; flex: 0 0 auto; }
+.lb-info { flex: 1; min-width: 0; }
+.lb-title { font-weight: 800; font-size: 16px; color: var(--gold); margin-bottom: 6px; }
+.lb-skill { font-size: 14px; margin-bottom: 4px; }
+.lb-skill b { color: #e7d6a8; }
+
+/* リーダースロットの強調 */
+.deck-slot.leader { background: linear-gradient(180deg, rgba(232,193,90,.14), var(--ink-2)); }
+
+/* ---- 上位レア生成：レア度選択 ---- */
+.up-tier-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; margin: 12px 0; }
+.up-tier { text-align: left; padding: 14px; border-radius: 12px; background: var(--ink-3); border: 1px solid var(--line); color: var(--text); cursor: pointer; }
+.up-tier:disabled { opacity: .45; cursor: not-allowed; }
+.up-tier.sel { border-color: var(--gold); box-shadow: inset 0 0 14px rgba(232,193,90,.2); }
+.ut-target { font-family: 'Cinzel', serif; font-weight: 800; font-size: 18px; color: var(--gold); }
+.ut-need { font-size: 12px; color: var(--text-dim); margin: 4px 0; }
+.ut-have.ok { color: var(--good); font-size: 12px; } .ut-have.ng { color: var(--enemy); font-size: 12px; }
+.up-confirm { margin-top: 16px; padding: 14px; border-radius: 12px; background: var(--ink-2); border: 1px solid var(--line); }
+.up-mat-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.up-mat-row .card { width: 84px; }
+
+@media (max-width: 760px) {
+  .dex-detail-card { width: 160px; }
+  .leader-banner { flex-direction: row; }
+  .dex-grid { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+}
