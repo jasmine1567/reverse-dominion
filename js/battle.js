@@ -81,7 +81,34 @@
     return layer;
   }
 
+  async function showRoll(clash) {
+    const layer = clashLayer();
+    const el = document.createElement("div");
+    el.className = "roll-fx";
+    el.innerHTML =
+      `<div class="roll-label">${clash.label}</div>` +
+      `<div class="roll-wheel"><span class="roll-spin">🎯</span></div>` +
+      `<div class="roll-chance">発動率 ${clash.chance}%</div>` +
+      `<div class="roll-result"></div>`;
+    layer.appendChild(el);
+    const aEl = bcardEl(clash.aRC), dEl = bcardEl(clash.dRC);
+    if (aEl) aEl.classList.add("fx-attacker");
+    if (dEl) dEl.classList.add("fx-roll-target");
+    await wait(680); // 抽選中
+    const res = el.querySelector(".roll-result");
+    el.classList.add(clash.success ? "hit" : "miss");
+    res.textContent = clash.success ? "成功！" : "失敗…";
+    if (clash.success) { if (dEl) { dEl.classList.add("fx-win"); } cellEl(clash.dRC)?.classList.add("fx-win-glow"); }
+    await wait(620);
+    el.classList.add("out");
+    await wait(240);
+    el.remove();
+    aEl && aEl.classList.remove("fx-attacker");
+    dEl && dEl.classList.remove("fx-roll-target");
+  }
+
   async function showClash(clash) {
+    if (clash.type === "roll") return showRoll(clash);
     const layer = clashLayer();
     const win = clash.win;
     const verdict = clash.type === "counter"
@@ -307,8 +334,8 @@
 
     await showVictory();
 
-    let pool = uniqueById(S.converted);
-    if (pool.length === 0) pool = S.cpuDeckBase.map((c) => ({ id: c.id, name: c.name, marks: (c.marks || []).slice() }));
+    // 報酬カードは「敵が保有し、ゲーム中に味方化した敵カード」のみ
+    const pool = uniqueById(S.converted);
     showReward(sc, coins, diamonds, items, pool, stage === 5);
   }
 
@@ -319,18 +346,31 @@
   }
 
   function showReward(sc, coins, diamonds, items, pool, isBoss) {
+    const itemTxt = items.length ? items.map((i) => { const it = Data.itemById(i); return `${it.art}${it.name}`; }).join("・") : "";
+    const proceed = () => { if (isBoss) { UI.toast("ダンジョン制覇！"); UI.show("dungeon"); } else nextStage(); };
+    if (pool.length === 0) {
+      UI.modal({
+        title: isBoss ? "🏆 ダンジョン制覇！" : `ステージ ${S.stage} クリア！`,
+        body:
+          `<p>スコア あなた ${sc.ally} - ${sc.enemy} CPU</p>` +
+          `<p>獲得：🪙${coins}${diamonds ? ` / 💎${diamonds}` : ""}${itemTxt ? ` / ${itemTxt}` : ""}</p>` +
+          `<p class="muted">今回は敵カードを味方化できなかったため、カード報酬はありません。<br>敵の攻撃マークを攻撃で上書きして味方化すると、そのカードを入手できます。</p>`,
+        noClose: true,
+        actions: [{ label: isBoss ? "ダンジョンへ" : "次のステージへ", primary: true, onClick: () => { UI.closeModal(); proceed(); } }],
+      });
+      return;
+    }
     const cardsHTML = pool.map((c, idx) => {
       const marks = (c.marks && c.marks.length) ? c.marks : Data.byId[c.id].marks;
       const card = Store.materialize({ id: c.id, level: 1, marks, extraSkills: [] });
       return UI.cardHTML(card, { selectable: true, data: `data-pick="${idx}"` });
     }).join("");
-    const itemTxt = items.length ? items.map((i) => { const it = Data.itemById(i); return `${it.art}${it.name}`; }).join("・") : "";
     UI.modal({
       title: isBoss ? "🏆 ダンジョン制覇！" : `ステージ ${S.stage} クリア！`,
       body:
         `<p>スコア あなた ${sc.ally} - ${sc.enemy} CPU</p>` +
         `<p>獲得：🪙${coins}${diamonds ? ` / 💎${diamonds}` : ""}${itemTxt ? ` / ${itemTxt}` : ""}</p>` +
-        `<p class="muted">味方にしたカードから1枚選んで入手（表示どおりの攻撃マーク・ステータスで入手できます）：</p>` +
+        `<p class="muted">味方化した敵カードから1枚を選んで入手（表示どおりの攻撃マーク・ステータスで入手できます）：</p>` +
         `<div class="reveal-grid">${cardsHTML}</div>`,
       noClose: true, actions: [],
     });
@@ -339,9 +379,7 @@
         const c = pool[+el.dataset.pick];
         const marks = (c.marks && c.marks.length) ? c.marks : Data.byId[c.id].marks;
         Store.addCard(c.id, { marks: marks.slice() });
-        UI.closeModal(); UI.refreshWallet();
-        if (isBoss) { UI.toast("ダンジョン制覇！カードを入手"); UI.show("dungeon"); }
-        else nextStage();
+        UI.closeModal(); UI.refreshWallet(); proceed();
       };
     });
   }

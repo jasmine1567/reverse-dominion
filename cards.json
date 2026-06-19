@@ -644,7 +644,7 @@
         "value": 1,
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
-      "image": "images/ssr001.webp",
+      "image": "images/ssr001.svg",
       "leaderSkill": "ls_coin"
     },
     {
@@ -669,7 +669,7 @@
         "value": 26,
         "desc": "攻撃時、自身の攻撃力+26"
       },
-      "image": "images/ssr002.webp",
+      "image": "images/ssr002.svg",
       "leaderSkill": "ls_drop"
     },
     {
@@ -694,7 +694,7 @@
         "value": 30,
         "desc": "防御時、自身の防御力+30"
       },
-      "image": "images/ssr003.webp",
+      "image": "images/ssr003.svg",
       "leaderSkill": "ls_atk"
     },
     {
@@ -721,7 +721,7 @@
         "value": 60,
         "desc": "攻撃時、相手の防御力を60%無視"
       },
-      "image": "images/ssr004.webp",
+      "image": "images/ssr004.svg",
       "leaderSkill": "ls_def"
     },
     {
@@ -746,7 +746,7 @@
         "value": 20,
         "desc": "登場時、隣接する味方の防御力+20"
       },
-      "image": "images/ssr005.webp",
+      "image": "images/ssr005.svg",
       "leaderSkill": "ls_all"
     },
     {
@@ -775,7 +775,7 @@
         "value": 1,
         "desc": "勝利時、その方向の先のカードも味方化する"
       },
-      "image": "images/ur001.webp",
+      "image": "images/ur001.svg",
       "leaderSkill": "ls_all"
     },
     {
@@ -802,7 +802,7 @@
         "value": 70,
         "desc": "攻撃時、相手の防御力を70%無視"
       },
-      "image": "images/ur002.webp",
+      "image": "images/ur002.svg",
       "leaderSkill": "ls_all"
     },
     {
@@ -829,8 +829,194 @@
         "value": 30,
         "desc": "攻撃時、自身の攻撃力+30"
       },
-      "image": "images/ur003.webp",
+      "image": "images/ur003.svg",
       "leaderSkill": "ls_all"
+    },
+    {
+      "id": "n013",
+      "name": "いたずら妖精",
+      "rarity": "N",
+      "art": "🧚",
+      "baseAtk": 40,
+      "baseDef": 34,
+      "marks": [
+        "NE",
+        "SW"
+      ],
+      "skill": {
+        "id": "bonus_mark_s",
+        "name": "増殖の刻印",
+        "type": "bonus_mark",
+        "trigger": "enter",
+        "value": 1,
+        "desc": "登場時、自身の攻撃マークがランダムに1つ増える"
+      },
+      "leaderSkill": "ls_atk"
+    },
+    {
+      "id": "n014",
+      "name": "見習い盗賊",
+      "rarity": "N",
+      "art": "🦝",
+      "baseAtk": 44,
+      "baseDef": 30,
+      "marks": [
+        "E",
+        "W"
+      ],
+      "skill": {
+        "id": "crit_s",
+        "name": "会心",
+        "type": "crit",
+        "trigger": "attack",
+        "value": 60,
+        "desc": "攻撃時、一定確率で攻撃力が大きく上昇（Lvで確率↑）",
+        "chance": 30
+      },
+      "leaderSkill": "ls_second"
+    },
+    {
+      "id": "r010",
+      "name": "影の暗殺者",
+      "rarity": "R",
+      "art": "🗡️",
+      "baseAtk": 64,
+      "baseDef": 40,
+      "marks": [
+        "N",
+        "E"
+      ],
+      "skill": {
+        "id": "crit_s",
+        "name": "会心",
+        "type": "crit",
+        "trigger": "attack",
+        "value": 60,
+        "desc": "攻撃時、一定確率で攻撃力が大きく上昇（Lvで確率↑）",
+        "chance": 30
+      },
+      "leaderSkill": "ls_atk"
+    },
+    {
+      "id": "r011",
+      "name": "呪詛の魔女",
+      "rarity": "R",
+      "art": "🧹",
+      "baseAtk": 55,
+      "baseDef": 48,
+      "marks": [
+        "N",
+        "S",
+        "E",
+        "W"
+      ],
+      "skill": {
+        "id": "weaken_s",
+        "name": "弱体の呪い",
+        "type": "weaken",
+        "trigger": "enter",
+        "value": 14,
+        "desc": "登場時、隣接する敵カードの防御力を下げる（Lvで効果↑）"
+      },
+      "leaderSkill": "ls_def"
+    },
+    {
+      "id": "sr008",
+      "name": "双頭の狼",
+      "rarity": "SR",
+      "art": "🐺",
+      "baseAtk": 74,
+      "baseDef": 60,
+      "marks": [
+        "E",
+        "W",
+        "NE",
+        "SW"
+      ],
+      "skill": {
+        "id": "prob_chain_s",
+        "name": "連撃の連鎖",
+        "type": "prob_chain",
+        "trigger": "win",
+        "value": 0,
+        "desc": "攻撃成功時、一定確率でその方向の先のカードも攻撃（Lvで確率↑）",
+        "chance": 30
+      },
+      "leaderSkill": "ls_all"
+    },
+    {
+      "id": "sr009",
+      "name": "反逆の騎士",
+      "rarity": "SR",
+      "art": "⚔️",
+      "baseAtk": 70,
+      "baseDef": 66,
+      "marks": [
+        "N",
+        "NE",
+        "NW"
+      ],
+      "skill": {
+        "id": "crit_s",
+        "name": "会心",
+        "type": "crit",
+        "trigger": "attack",
+        "value": 60,
+        "desc": "攻撃時、一定確率で攻撃力が大きく上昇（Lvで確率↑）",
+        "chance": 30
+      },
+      "leaderSkill": "ls_second"
+    },
+    {
+      "id": "ssr006",
+      "name": "混沌の道化",
+      "rarity": "SSR",
+      "art": "🃏",
+      "baseAtk": 90,
+      "baseDef": 66,
+      "marks": [
+        "N",
+        "E",
+        "S",
+        "W"
+      ],
+      "skill": {
+        "id": "prob_chain_s",
+        "name": "連撃の連鎖",
+        "type": "prob_chain",
+        "trigger": "win",
+        "value": 0,
+        "desc": "攻撃成功時、一定確率でその方向の先のカードも攻撃（Lvで確率↑）",
+        "chance": 40
+      },
+      "leaderSkill": "ls_all",
+      "image": "images/ssr006.svg"
+    },
+    {
+      "id": "ur004",
+      "name": "刻詠みの賢者",
+      "rarity": "UR",
+      "art": "⏳",
+      "baseAtk": 115,
+      "baseDef": 100,
+      "marks": [
+        "N",
+        "E",
+        "S",
+        "W",
+        "NE",
+        "SW"
+      ],
+      "skill": {
+        "id": "bonus_mark_l",
+        "name": "時の増殖",
+        "type": "bonus_mark",
+        "trigger": "enter",
+        "value": 2,
+        "desc": "登場時、自身の攻撃マークがランダムに増える（Lvで増加↑）"
+      },
+      "leaderSkill": "ls_all",
+      "image": "images/ur004.svg"
     }
   ]
 }

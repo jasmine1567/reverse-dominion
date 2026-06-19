@@ -4,6 +4,8 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Re:Verse Dominion</title>
+  <script async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-4593324513914979"
+       crossorigin="anonymous"></script>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;700;800&family=Cinzel+Decorative:wght@700&family=Shippori+Mincho+B1:wght@600;700;800&display=swap" rel="stylesheet">
@@ -29,6 +31,7 @@
     <button data-view="fusion">合成</button>
     <button data-view="dungeon">ダンジョン</button>
     <button data-view="quest">クエスト</button>
+    <button data-view="skills">スキル図鑑</button>
     <button data-view="arena">競技場</button>
     <button data-view="ranking">ランキング</button>
   </nav>
@@ -73,18 +76,24 @@
 
     <!-- COLLECTION -->
     <section class="view" id="view-collection">
-      <div class="section-title"><h2>所持カード</h2><p>不要なカードは売却してコインに</p></div>
+      <div class="section-title"><h2>所持カード</h2><p>★お気に入り登録／検索・絞り込み・並び替え対応</p></div>
       <div class="toolbar">
+        <input type="search" id="colSearch" placeholder="名前で検索" style="min-width:120px" />
         <select id="colRarity">
           <option value="">全レアリティ</option>
           <option>N</option><option>R</option><option>SR</option><option>SSR</option><option>UR</option>
         </select>
         <select id="colSort">
-          <option value="rarity">レア度順</option>
+          <option value="rarity_desc">レア度（高→低）</option>
+          <option value="rarity_asc">レア度（低→高）</option>
+          <option value="seq_desc">入手順（新→古）</option>
+          <option value="seq_asc">入手順（古→新）</option>
           <option value="atk">攻撃力順</option>
           <option value="def">防御力順</option>
+          <option value="level">レベル順</option>
           <option value="name">名前順</option>
         </select>
+        <button id="colFav" class="ghost">★お気に入りのみ</button>
         <span class="spacer"></span>
         <span class="muted" id="colCount"></span>
       </div>
@@ -120,6 +129,12 @@
       </div>
       <div class="toolbar"><b>素材選択：</b><span class="muted" id="fuseMode">ベース選択中</span></div>
       <div class="card-grid" id="fusionPool"></div>
+    </section>
+
+    <!-- SKILLS -->
+    <section class="view" id="view-skills">
+      <div class="section-title"><h2>スキル図鑑</h2><p>各スキルの効果を盤面の図解で確認できます</p></div>
+      <div id="skillsBody"></div>
     </section>
 
     <!-- QUEST -->

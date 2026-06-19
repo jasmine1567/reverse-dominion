@@ -776,3 +776,128 @@ table.rank td.num { font-variant-numeric: tabular-nums; text-align: right; }
 .advice:hover { border-color: var(--cyan); }
 .advice .adv-ico { font-size: 24px; }
 .ls-line { margin-top: 10px; font-size: 12.5px; color: var(--gold); }
+
+/* ============================================================
+   v8: お気に入り / 保護バッジ / 抽選演出 / 一括受取 / スキル図解 / モバイル最適化
+   ============================================================ */
+/* ---- お気に入りボタン ---- */
+.fav-btn { position: absolute; left: 7px; bottom: 7px; z-index: 8; width: 26px; height: 26px; border-radius: 50%;
+  border: 1px solid var(--line); background: rgba(8,10,16,.8); color: #8a8f99; font-size: 14px; line-height: 1; cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center; transition: transform .15s, color .15s; }
+.fav-btn:hover { transform: scale(1.15); }
+.fav-btn.on { color: var(--gold); border-color: var(--gold); box-shadow: 0 0 10px rgba(232,193,90,.5); }
+
+/* ---- 保護バッジ ---- */
+.lock-badge { position: absolute; top: 6px; left: 50%; transform: translateX(-50%); z-index: 9; font-size: 10px; font-weight: 700;
+  background: rgba(10,12,18,.9); border: 1px solid var(--line); color: #c8a6e0; border-radius: 6px; padding: 1px 7px; white-space: nowrap; }
+
+/* ---- 抽選（確率発動）演出 ---- */
+.roll-fx { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 14px 22px; border-radius: 14px;
+  background: linear-gradient(160deg, rgba(20,24,38,.96), rgba(12,14,24,.96)); border: 1px solid var(--cyan-deep);
+  box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 26px rgba(70,212,216,.3); animation: clashIn .3s ease; }
+.roll-fx.out { animation: clashOut .25s ease forwards; }
+.roll-label { font-weight: 700; font-size: 13px; color: var(--cyan); }
+.roll-wheel { font-size: 34px; }
+.roll-spin { display: inline-block; animation: rollSpin .5s linear infinite; }
+@keyframes rollSpin { to { transform: rotate(360deg) scale(1.08); } }
+.roll-chance { font-size: 12px; color: var(--text-dim); font-variant-numeric: tabular-nums; }
+.roll-result { font-weight: 800; font-size: 16px; min-height: 20px; }
+.roll-fx.hit { border-color: var(--good); box-shadow: 0 12px 40px rgba(0,0,0,.6), 0 0 30px rgba(80,220,140,.5); }
+.roll-fx.hit .roll-result { color: var(--good); }
+.roll-fx.hit .roll-spin { animation: none; }
+.roll-fx.miss { border-color: var(--enemy); }
+.roll-fx.miss .roll-result { color: var(--enemy); }
+.roll-fx.miss .roll-spin { animation: none; opacity: .5; }
+.bcard.fx-roll-target, .cell .bcard.fx-roll-target { outline: 3px solid var(--cyan); outline-offset: -2px; animation: rollTarget .5s ease-in-out infinite alternate; }
+@keyframes rollTarget { from { box-shadow: 0 0 0 rgba(70,212,216,0); } to { box-shadow: 0 0 18px rgba(70,212,216,.8); } }
+
+/* ---- クエスト一括受取バー ---- */
+.claim-all-bar { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; margin-bottom: 16px; border-radius: 12px;
+  background: linear-gradient(120deg, rgba(232,193,90,.14), rgba(70,212,216,.1)); border: 1px solid var(--line); }
+.claim-all-bar b { color: var(--gold); font-size: 18px; }
+
+/* ---- スキル図鑑 ---- */
+.skill-doc { display: flex; gap: 16px; align-items: center; padding: 14px; border-radius: 12px; background: var(--ink-3);
+  border: 1px solid var(--line); margin-bottom: 12px; }
+.sd-board { flex: 0 0 auto; }
+.sd-text { flex: 1; min-width: 0; }
+.sd-text h4 { margin: 0 0 6px; font-size: 15px; }
+.sd-text p { margin: 0; color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+.mini-board { display: grid; grid-template-columns: repeat(3, 38px); grid-template-rows: repeat(3, 38px); gap: 4px; }
+.mb-cell { border-radius: 6px; background: var(--ink); border: 1px solid var(--line); position: relative;
+  display: flex; align-items: center; justify-content: center; font-size: 18px; }
+.mb-cell.ally { background: rgba(58,110,165,.3); border-color: var(--cyan-deep); }
+.mb-cell.enemy { background: rgba(165,58,80,.3); border-color: #7a3a4a; }
+.mb-cell.block { background: repeating-linear-gradient(45deg,#20283b,#20283b 5px,#161d2e 5px,#161d2e 10px); color:#3a465f; }
+.mb-arrow { position: absolute; font-size: 13px; color: var(--cyan); font-weight: 800; }
+.mb-cap { margin-top: 8px; font-size: 11px; color: var(--text-dim); text-align: center; max-width: 130px; }
+.mb-cell.fx-flip { animation: mbFlip 2.4s ease-in-out infinite; }
+@keyframes mbFlip { 0%,40% { background: rgba(165,58,80,.3); border-color:#7a3a4a; } 60%,100% { background: rgba(58,110,165,.45); border-color: var(--cyan-deep); } }
+.mb-cell.fx-pulse { animation: mbPulse 1.8s ease-in-out infinite; }
+@keyframes mbPulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.1); box-shadow: 0 0 10px rgba(70,212,216,.5); } }
+.mb-cell.fx-mark { animation: mbMark 1.8s ease-in-out infinite; }
+@keyframes mbMark { 0%,100% { box-shadow: 0 0 0 rgba(232,193,90,0); } 50% { box-shadow: 0 0 12px rgba(232,193,90,.8); border-color: var(--gold); } }
+.mb-cell.fx-down { animation: mbDown 1.8s ease-in-out infinite; }
+@keyframes mbDown { 0%,100% { opacity: 1; } 50% { opacity: .45; transform: translateY(2px); } }
+
+/* ============================================================
+   モバイル最適化
+   ============================================================ */
+@media (max-width: 760px) {
+  header { flex-wrap: wrap; gap: 8px; padding: 10px 12px; }
+  .brand { font-size: 18px; }
+  .wallet { gap: 8px; width: 100%; margin-left: 0; }
+  .wallet .chip { font-size: 12px; }
+  main { padding: 12px; }
+  nav { overflow-x: auto; flex-wrap: nowrap; -webkit-overflow-scrolling: touch; scrollbar-width: none; gap: 4px; padding-bottom: 4px; }
+  nav::-webkit-scrollbar { display: none; }
+  nav button { white-space: nowrap; flex: 0 0 auto; padding: 8px 12px; }
+  .toolbar { gap: 6px; }
+  .toolbar select, .toolbar input, .toolbar button { font-size: 13px; padding: 7px 9px; }
+  .section-title h2 { font-size: 20px; }
+  .home-hero { flex-direction: column; align-items: stretch; gap: 14px; padding: 14px; }
+  .leader-stage, .leader-card, .leader-empty { width: 160px; margin: 0 auto; }
+  .home-side { min-width: 0; }
+  .skill-doc { flex-direction: column; align-items: flex-start; }
+  .mb-cap { max-width: none; }
+  .modal-card { width: 94vw; max-width: 94vw; }
+  .reveal-grid .card { width: 132px; }
+  button, .mini-btn, nav button { min-height: 40px; }
+  .deck-slots { justify-content: center; }
+  .deck-slot { width: 30vw; max-width: 110px; height: auto; min-height: 120px; padding: 8px 4px; }
+}
+@media (max-width: 420px) {
+  .card-grid { grid-template-columns: repeat(2, 1fr); }
+  .mini-board { grid-template-columns: repeat(3, 32px); grid-template-rows: repeat(3, 32px); }
+  .brand small { display: none; }
+  .deck-slot { width: 44vw; }
+}
+/* タッチ操作の最適化 */
+@media (hover: none) {
+  .card.selectable:hover { transform: none; }
+}
+
+/* ---- ホーム上部の装飾 ---- */
+.home-hero { position: relative; overflow: hidden; }
+.home-hero::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; opacity: .5;
+  background:
+    radial-gradient(2px 2px at 20% 30%, rgba(255,255,255,.5), transparent),
+    radial-gradient(2px 2px at 70% 20%, rgba(70,212,216,.6), transparent),
+    radial-gradient(1.5px 1.5px at 85% 60%, rgba(232,193,90,.6), transparent),
+    radial-gradient(1.5px 1.5px at 35% 75%, rgba(255,255,255,.4), transparent),
+    radial-gradient(2px 2px at 55% 45%, rgba(176,111,240,.5), transparent),
+    radial-gradient(1.5px 1.5px at 10% 80%, rgba(70,212,216,.5), transparent);
+  animation: heroTwinkle 6s ease-in-out infinite alternate;
+}
+@keyframes heroTwinkle { from { opacity: .35; } to { opacity: .7; } }
+.home-hero::after {
+  content: ""; position: absolute; right: -60px; top: -60px; width: 240px; height: 240px; pointer-events: none; opacity: .12;
+  background: conic-gradient(from 0deg, transparent, var(--cyan), transparent 40%, var(--gold), transparent 70%, var(--cyan));
+  border-radius: 50%; animation: heroOrbit 24s linear infinite; }
+@keyframes heroOrbit { to { transform: rotate(360deg); } }
+.leader-stage { position: relative; z-index: 1; }
+.leader-stage::before {
+  content: ""; position: absolute; left: 50%; top: 50%; width: 230px; height: 230px; transform: translate(-50%,-50%); z-index: -1;
+  background: radial-gradient(circle, rgba(70,212,216,.18), transparent 65%); pointer-events: none; }

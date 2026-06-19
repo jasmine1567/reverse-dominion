@@ -17,9 +17,10 @@
   function skillLine(card, opts = {}) {
     const parts = [];
     const lv = (s) => (s.level && s.level > 1) ? ` <span style="color:var(--gold)">Lv${s.level}</span>` : "";
-    if (card.skill && card.skill.type !== "none") parts.push(`<b>${card.skill.name}</b>${lv(card.skill)}：${card.skill.desc}`);
+    const ch = (s) => s.chance ? ` <span style="color:var(--cyan)">発動${Data.chanceVal(s)}%</span>` : "";
+    if (card.skill && card.skill.type !== "none") parts.push(`<b>${card.skill.name}</b>${lv(card.skill)}${ch(card.skill)}：${card.skill.desc}`);
     else parts.push('<span class="muted">固有スキルなし</span>');
-    (card.extraSkills || []).forEach((s) => parts.push(`<b style="color:var(--cyan)">＋${s.name}</b>${lv(s)}：${s.desc}`));
+    (card.extraSkills || []).forEach((s) => parts.push(`<b style="color:var(--cyan)">＋${s.name}</b>${lv(s)}${ch(s)}：${s.desc}`));
     if (opts.leader && card.leaderSkill) {
       const ls = card.leaderSkill;
       parts.push(`<b style="color:#e7d6a8">👑${ls.name}</b>${ls.level > 1 ? ` <span style="color:var(--gold)">Lv${ls.level}</span>` : ""}：${Data.leaderDesc(ls, ls.level)}`);
@@ -36,6 +37,8 @@
     if (opts.dim) cls.push("dim");
     if (opts.mini) cls.push("mini");
     const qty = opts.qty ? `<div class="qty">×${opts.qty}</div>` : "";
+    const favBtn = opts.favKey ? `<button class="fav-btn ${opts.favActive ? "on" : ""}" data-fav="${opts.favKey}" title="お気に入り">${opts.favActive ? "★" : "☆"}</button>` : "";
+    const lockBadge = opts.locked ? `<div class="lock-badge">🔒${opts.lockReason || "保護"}</div>` : "";
     const ea = Data.effAtk(card), ed = Data.effDef(card);
     const lv = card.level >= Data.MAX_LEVEL ? "★" : String(card.level);
     const dots = Array.from({ length: RARITY_DOTS[card.rarity] || 1 }, () => "<i></i>").join("");
@@ -46,7 +49,7 @@
     const sweep = card.rarity === "UR" ? '<i class="fr-sweep"></i>' : "";
     return (
       `<div class="${cls.join(" ")}" data-rarity="${card.rarity}" ${opts.data || ""}>` +
-      holo + corners +
+      holo + corners + favBtn + lockBadge +
       (opts.noMarks ? "" : marksHTML(card.marks)) +
       `<div class="card-inner">` + sweep +
         `<div class="fr-head">` +
@@ -76,7 +79,7 @@
       const map = {
         home: this.renderHome, gacha: () => {}, collection: this.renderCollection,
         deck: this.renderDeck, fusion: this.renderFusion, dungeon: this.renderDungeon,
-        quest: this.renderQuests,
+        quest: this.renderQuests, skills: this.renderSkills,
         arena: this.renderArena, ranking: this.renderRanking, battle: () => {},
       };
       (map[view] || (() => {})).call(this);
@@ -202,20 +205,40 @@
     },
 
     /* ---------- COLLECTION ---------- */
+    collFavOnly: false,
     renderCollection() {
       const grid = $("collectionGrid");
-      const rarity = $("colRarity").value, sort = $("colSort").value;
-      let groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
+      const rarity = $("colRarity").value, sort = $("colSort").value || "rarity_desc";
+      const q = (($("colSearch") && $("colSearch").value) || "").trim();
+      let groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]), anyFav: g.insts.some((i) => i.fav) }));
       if (rarity) groups = groups.filter((g) => g.card.rarity === rarity);
+      if (q) groups = groups.filter((g) => g.card.name.includes(q));
+      if (this.collFavOnly) groups = groups.filter((g) => g.anyFav);
+      const rrank = (g) => Data.rarityRank(g.card.rarity);
+      const gseq = (g) => Math.max(...g.insts.map((i) => i.seq || 0));
       groups.sort((a, b) => {
-        if (sort === "atk") return Data.effAtk(b.card) - Data.effAtk(a.card);
-        if (sort === "def") return Data.effDef(b.card) - Data.effDef(a.card);
-        if (sort === "name") return a.card.name.localeCompare(b.card.name, "ja");
-        return Data.rarityRank(b.card.rarity) - Data.rarityRank(a.card.rarity) || b.card.level - a.card.level;
+        switch (sort) {
+          case "rarity_asc": return rrank(a) - rrank(b) || a.card.level - b.card.level;
+          case "seq_desc": return gseq(b) - gseq(a);
+          case "seq_asc": return gseq(a) - gseq(b);
+          case "atk": return Data.effAtk(b.card) - Data.effAtk(a.card);
+          case "def": return Data.effDef(b.card) - Data.effDef(a.card);
+          case "level": return b.card.level - a.card.level || rrank(b) - rrank(a);
+          case "name": return a.card.name.localeCompare(b.card.name, "ja");
+          default: return rrank(b) - rrank(a) || b.card.level - a.card.level;
+        }
       });
-      $("colCount").textContent = `所持 ${Store.state.owned.length} 枚 / ${groups.length} 種`;
-      if (groups.length === 0) { grid.innerHTML = `<div class="empty-note">カードがありません。ガチャを引いてみましょう。</div>`; return; }
-      grid.innerHTML = groups.map((g) => cardHTML(g.card, { qty: g.insts.length, selectable: true, data: `data-key="${g.key}"` })).join("");
+      const favBtn = $("colFav"); if (favBtn) favBtn.classList.toggle("primary", this.collFavOnly);
+      $("colCount").textContent = `所持 ${Store.state.owned.length} 枚 / 表示 ${groups.length} 種`;
+      if (groups.length === 0) { grid.innerHTML = `<div class="empty-note">該当するカードがありません。</div>`; return; }
+      grid.innerHTML = groups.map((g) => cardHTML(g.card, { qty: g.insts.length, selectable: true, favKey: g.key, favActive: g.anyFav, data: `data-key="${g.key}"` })).join("");
+      grid.querySelectorAll(".fav-btn").forEach((b) => (b.onclick = (e) => {
+        e.stopPropagation();
+        const g = UI.groups().find((x) => x.key === b.dataset.fav); if (!g) return;
+        const anyFav = g.insts.some((i) => i.fav);
+        Store.toggleFavInsts(g.insts.map((i) => i.uid), !anyFav);
+        UI.renderCollection();
+      }));
       grid.querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => UI.cardDetail(el.dataset.key)));
     },
 
@@ -245,6 +268,11 @@
             </div></div>`,
         actions: [
           { label: "閉じる", onClick: () => UI.closeModal() },
+          { label: g.insts.some((i) => i.fav) ? "★お気に入り解除" : "☆お気に入り登録", onClick: () => {
+              const anyFav = g.insts.some((i) => i.fav);
+              Store.toggleFavInsts(g.insts.map((i) => i.uid), !anyFav);
+              UI.refreshView(); UI.cardDetail(key);
+            } },
           ...(!isMax ? [{ label: "強化する（経験値合成）", primary: true, onClick: () => {
               UI.closeModal();
               UI.fuseState = { mode: "enhance", base: inst.uid, mats: [], items: {} };
@@ -390,6 +418,23 @@
     },
     instById(uid) { return Store.state.owned.find((o) => o.uid === uid); },
 
+    // 保護カード（デッキ・お気に入り）を除外し、弱いカードから素材候補を返す
+    autoPickFodder(baseUid, opts = {}) {
+      const cand = Store.state.owned
+        .filter((o) => o.uid !== baseUid && !Store.isProtected(o.uid))
+        .sort((a, b) => Data.rarityRank(Data.byId[a.id].rarity) - Data.rarityRank(Data.byId[b.id].rarity) || (a.level || 1) - (b.level || 1));
+      if (opts.targetExp && opts.targetExp > 0) {
+        const out = []; let acc = 0;
+        for (const o of cand) {
+          out.push(o.uid); acc += Data.cardXp(Data.byId[o.id].rarity);
+          if (acc >= opts.targetExp) break;
+          if (out.length >= 30) break;
+        }
+        return out;
+      }
+      return cand.slice(0, opts.limit || 20).map((o) => o.uid);
+    },
+
     /* ---------- スキルレベル（同じスキルカードを合成） ---------- */
     renderSkillLevel() {
       $("fuseDesc").textContent = "固有/リーダー/追加スキルを個別にレベルアップ（同じスキルのカードを消費）";
@@ -427,7 +472,9 @@
             ${isMaxLv ? '<p style="color:var(--gold)">スキルレベルが最大です</p>' :
               `<p class="muted">Lv.${sel.lv}→${sel.lv + 1} に必要：同じスキルのカード <b>${need}</b> 枚（選択 ${chosen.length}/${need}）</p>
                <div class="row" style="margin:8px 0"><button class="gold" id="doSkillUp" ${chosen.length >= need ? "" : "disabled"}>スキルレベルアップ</button>
+               <button id="skillAuto">おまかせで${need}枚選ぶ</button>
                <span class="muted">素材は消費されます</span></div>
+               <p class="muted" style="font-size:11px;margin:0 0 6px">🔒 デッキ編成中・お気に入りのカードは対象外です</p>
                <div class="toolbar"><b>素材（「${sel.name}」を持つカード）：</b></div>
                <div class="card-grid" id="skillMatPool">${valids.length ? "" : '<span class="muted">同じスキルを持つカードがありません。</span>'}</div>`}
           </div>`;
@@ -456,17 +503,28 @@
             if (sel.slot === "leader") return b.leaderSkill === sel.id;
             return b.skill && b.skill.id === sel.id;
           });
-          // group identical for display
           pool.innerHTML += valids.map((o) => {
             const card = Store.materialize(o);
             const isSel = fs.mats.includes(o.uid);
-            return cardHTML(card, { selectable: true, selected: isSel, data: `data-mat="${o.uid}"` });
+            const prot = Store.isProtected(o.uid) && !isSel;
+            return cardHTML(card, { selectable: !prot, dim: prot, selected: isSel, locked: prot, data: `data-mat="${o.uid}"` });
           }).join("");
           pool.querySelectorAll("[data-mat]").forEach((el) => (el.onclick = () => {
-            const u = el.dataset.mat, idx = fs.mats.indexOf(u);
+            const u = el.dataset.mat;
+            if (Store.isProtected(u) && !fs.mats.includes(u)) { UI.toast("保護中のカードは選べません"); return; }
+            const idx = fs.mats.indexOf(u);
             if (idx >= 0) fs.mats.splice(idx, 1); else fs.mats.push(u);
             UI.renderSkillLevel();
           }));
+          const sa = $("skillAuto");
+          if (sa) sa.onclick = () => {
+            const need = Data.skillUpCost(sel.lv);
+            const pick = valids.filter((o) => !Store.isProtected(o.uid))
+              .sort((a, b) => Data.rarityRank(Data.byId[a.id].rarity) - Data.rarityRank(Data.byId[b.id].rarity))
+              .slice(0, need).map((o) => o.uid);
+            if (pick.length < need) { UI.toast(`素材が足りません（保護カードを除く ${pick.length}/${need}）`); }
+            fs.mats = pick; UI.renderSkillLevel();
+          };
         }
         const btn = $("doSkillUp");
         if (btn) btn.onclick = () => {
@@ -526,8 +584,11 @@
         <div class="item-strip">${items || '<span class="muted">アイテムなし</span>'}</div>
         <div class="row" style="margin-bottom:12px">
           <button class="gold" id="doEnhance" ${baseCard && gain > 0 && !baseCard.isMax ? "" : "disabled"}>強化する</button>
+          ${baseCard && !baseCard.isMax ? `<button id="autoPick">おまかせ選択</button>` : ""}
+          ${fs.mats.length ? `<button class="ghost" id="clearMats">素材クリア</button>` : ""}
           <span class="muted">${!baseCard ? "ベースを選択してください" : baseCard.isMax ? "このカードはMAXです" : gain > 0 ? "素材カード/アイテムを合成" : "素材を選んでください"}</span>
         </div>
+        ${baseCard ? '<p class="muted" style="font-size:11px;margin:0 0 8px">🔒 デッキ編成中・お気に入りのカードは「おまかせ選択」の対象外です（手動でも選べません）。</p>' : ""}
         <div class="toolbar"><b>${fs.base ? "素材カード" : "ベース"}を選択：</b> <span class="muted">（素材カードは消費されます）</span></div>
         <div class="card-grid" id="fusePool"></div>`;
       // item steppers
@@ -543,8 +604,9 @@
         const baseHere = fs.base && g.insts.some((i) => i.uid === fs.base);
         const usedAsMat = g.insts.filter((i) => fs.mats.includes(i.uid)).length;
         const selectingBase = !fs.base;
-        const dim = selectingBase && g.card.isMax;
-        return cardHTML(g.card, { qty: g.insts.length, selectable: !dim || !selectingBase, dim, selected: baseHere || usedAsMat > 0, data: `data-key="${g.key}"` });
+        const protectedAll = !selectingBase && g.insts.every((i) => i.uid === fs.base || Store.isProtected(i.uid));
+        const dim = (selectingBase && g.card.isMax) || protectedAll;
+        return cardHTML(g.card, { qty: g.insts.length, selectable: !dim, dim, selected: baseHere || usedAsMat > 0, locked: !selectingBase && protectedAll, lockReason: "保護", data: `data-key="${g.key}"` });
       }).join("");
       $("fusePool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
         const g = groups.find((x) => x.key === el.dataset.key);
@@ -552,12 +614,20 @@
           if (g.card.isMax) { UI.toast("MAXのカードは強化できません"); return; }
           fs.base = g.insts[0].uid;
         } else {
-          const avail = g.insts.find((i) => i.uid !== fs.base && !fs.mats.includes(i.uid));
-          if (!avail) { UI.toast("選べるカードがありません"); return; }
+          const avail = g.insts.find((i) => i.uid !== fs.base && !fs.mats.includes(i.uid) && !Store.isProtected(i.uid));
+          if (!avail) { UI.toast("選べる素材がありません（保護中の可能性）"); return; }
           fs.mats.push(avail.uid);
         }
         UI.renderEnhance();
       }));
+      const ap = $("autoPick");
+      if (ap) ap.onclick = () => {
+        const picked = UI.autoPickFodder(fs.base, { targetExp: (baseCard.expNeed || 0) - (baseCard.exp || 0) });
+        if (picked.length === 0) { UI.toast("おまかせ選択できる素材がありません（保護カードを除く）"); return; }
+        fs.mats = picked; UI.renderEnhance();
+        UI.toast(`おまかせで ${picked.length} 枚を選択`);
+      };
+      const cm = $("clearMats"); if (cm) cm.onclick = () => { fs.mats = []; UI.renderEnhance(); };
       const btn = $("doEnhance");
       if (btn) btn.onclick = () => {
         const usedItems = Object.values(fs.items || {}).some((v) => v > 0);
@@ -647,25 +717,37 @@
         </div>
         ${ready ? `<div class="row" style="margin-bottom:12px"><b>生成するカードを選択：</b></div>
           <div class="reveal-grid" id="targetPool">${targetPool.map((c) => cardHTML(Store.materialize({ id: c.id, level: 1, marks: c.marks, extraSkills: [] }), { selectable: true, noMarks: true, data: `data-tid="${c.id}"` })).join("")}</div>` : ""}
-        <div class="toolbar" style="margin-top:14px"><b>素材を選択：</b></div>
+        <div class="row" style="margin:10px 0 4px">
+          ${baseRarity && !ready ? `<button id="upAuto">おまかせで${need}枚そろえる</button>` : ""}
+          <span class="muted" style="font-size:11px">🔒 デッキ編成中・お気に入りのカードは対象外です</span>
+        </div>
+        <div class="toolbar" style="margin-top:6px"><b>素材を選択：</b></div>
         <div class="card-grid" id="fusePool"></div>`;
       $("clearSel").onclick = () => { fs.base = null; fs.mats = []; UI.renderUpgrade(); };
       const groups = this.groups().map((g) => ({ ...g, card: Store.materialize(g.insts[0]) }));
       $("fusePool").innerHTML = groups.map((g) => {
         const selCount = g.insts.filter((i) => chosen.includes(i.uid)).length;
         const matchRar = !baseRarity || g.card.rarity === baseRarity;
-        return cardHTML(g.card, { qty: g.insts.length, selectable: matchRar, dim: !matchRar, selected: selCount > 0, data: `data-key="${g.key}"` });
+        const protectedAll = g.insts.every((i) => Store.isProtected(i.uid) && !chosen.includes(i.uid));
+        return cardHTML(g.card, { qty: g.insts.length, selectable: matchRar && !protectedAll, dim: !matchRar || protectedAll, selected: selCount > 0, locked: protectedAll, data: `data-key="${g.key}"` });
       }).join("");
       $("fusePool").querySelectorAll("[data-key]").forEach((el) => (el.onclick = () => {
         const g = groups.find((x) => x.key === el.dataset.key);
         const r = g.card.rarity;
         if (baseRarity && r !== baseRarity) { UI.toast("同じレアリティで揃えてください"); return; }
-        const avail = g.insts.find((i) => !chosen.includes(i.uid));
-        if (!avail) { UI.toast("これ以上選べません"); return; }
+        const avail = g.insts.find((i) => !chosen.includes(i.uid) && !Store.isProtected(i.uid));
+        if (!avail) { UI.toast("選べる素材がありません（保護中の可能性）"); return; }
         if (!fs.base) fs.base = avail.uid;
         else { const cap = Data.FUSE_UPGRADE_COUNT[baseRarity || r]; if (chosen.length >= cap) { UI.toast(`${cap}枚までです`); return; } fs.mats.push(avail.uid); }
         UI.renderUpgrade();
       }));
+      const upAuto = $("upAuto");
+      if (upAuto) upAuto.onclick = () => {
+        const pool = Store.state.owned.filter((o) => Data.byId[o.id].rarity === baseRarity && !Store.isProtected(o.uid) && !chosen.includes(o.uid)).map((o) => o.uid);
+        const all = [...chosen, ...pool].slice(0, need);
+        if (all.length < need) { UI.toast(`${baseRarity}の素材が足りません（保護カードを除く）`); }
+        fs.base = all[0] || fs.base; fs.mats = all.slice(1); UI.renderUpgrade();
+      };
       if (ready) {
         $("targetPool").querySelectorAll("[data-tid]").forEach((el) => (el.onclick = () => {
           const tid = el.dataset.tid;
@@ -770,11 +852,19 @@
         }).join("");
         return `<div class="quest-section"><h3>${title} <span class="muted" style="font-weight:400">${sub}</span></h3>${rows}</div>`;
       };
+      const claimable = Quest.claimable();
       $("questBody").innerHTML =
+        `<div class="claim-all-bar"><span>受け取れる報酬：<b>${claimable}</b> 件</span><button class="gold" id="claimAllBtn" ${claimable ? "" : "disabled"}>まとめて受け取る</button></div>` +
         section("🔰 序盤ミッション", "ゲームに慣れながら報酬ゲット", Quest.list("start")) +
         section("デイリー", "毎日0時にリセット", Quest.list("daily")) +
         section("ウィークリー", "毎週リセット", Quest.list("weekly")) +
         section("実績", "一度だけ達成できます", Quest.list("achievement"));
+      const cab = $("claimAllBtn");
+      if (cab) cab.onclick = () => {
+        const r = Quest.claimAll();
+        if (r.count === 0) { UI.toast("受け取れる報酬がありません"); return; }
+        UI.afterChange(); UI.toast(`${r.count}件受取：${Quest.rewardText(r.reward)}`); UI.renderQuests();
+      };
       $("questBody").querySelectorAll("[data-claim]").forEach((b) => (b.onclick = () => {
         const r = Quest.claim(b.dataset.claim);
         if (!r.ok) { UI.toast(r.reason); return; }
@@ -782,7 +872,59 @@
       }));
     },
 
-    /* ---------- RANKING ---------- */
+    /* ---------- SKILL GUIDE（図解） ---------- */
+    miniBoard(cells, cap) {
+      // cells: 9要素（3x3）。各要素 {t:'ally'|'enemy'|'empty'|'block'|'ally2'|'enemy2', a:'矢印', fx:'flip'|'pulse'|'down'|'mark'}
+      const cell = (c) => {
+        if (!c || c.t === "empty") return '<div class="mb-cell"></div>';
+        if (c.t === "block") return '<div class="mb-cell block">■</div>';
+        const cls = c.t.replace("2", "");
+        const arrow = c.a ? `<span class="mb-arrow">${c.a}</span>` : "";
+        const fx = c.fx ? ` fx-${c.fx}` : "";
+        return `<div class="mb-cell ${cls}${fx}">${c.g || ""}${arrow}</div>`;
+      };
+      return `<div class="mini-board">${cells.map(cell).join("")}</div>${cap ? `<div class="mb-cap">${cap}</div>` : ""}`;
+    },
+    renderSkills() {
+      const M = (cells, cap) => this.miniBoard(cells, cap);
+      const A = { t: "ally", g: "🟦" }, E = { t: "enemy", g: "🟥" }, _ = { t: "empty" };
+      const docs = [
+        { name: "基本：攻撃と味方化", fam: "基本", desc: "設置したカードの攻撃マーク（▼）の方向にいる敵を、攻撃力＞相手の防御力 なら味方化（裏返し）します。",
+          board: M([_, { t: "ally", g: "🟦", a: "→", fx: "pulse" }, { t: "enemy", g: "🟥", fx: "flip" }, _, _, _, _, _, _], "🟦の攻撃 → 🟥が味方化（🟦へ）") },
+        { name: "基本：反撃", fam: "基本", desc: "攻撃しても倒せず、相手の攻撃マークが自分を向いていると反撃されます。反撃力＞自分の防御力 だと逆に寝返ります。",
+          board: M([_, { t: "ally", g: "🟦", a: "→" }, { t: "enemy", g: "🟥", a: "←", fx: "pulse" }, _, _, _, _, _, _], "互いに向き合うと反撃が発生") },
+        { name: "連鎖の咆哮（chain）", fam: "勝利時", desc: "攻撃で味方化に成功したとき、その方向のさらに先のカードも味方化します（必ず発動）。",
+          board: M([{ t: "ally", g: "🟦", a: "→", fx: "pulse" }, { t: "enemy", g: "🟥", fx: "flip" }, { t: "enemy", g: "🟥", fx: "flip" }, _, _, _, _, _, _], "1体目→2体目まで連鎖で味方化") },
+        { name: "連撃の連鎖（確率）", fam: "勝利時", desc: "攻撃成功時、一定確率でその先のカードも攻撃します。発動率はスキルレベルで上昇（例：Lv1 30%→Lv3 60%）。発動時は抽選エフェクトが表示されます。",
+          board: M([{ t: "ally", g: "🟦", a: "→", fx: "pulse" }, { t: "enemy", g: "🟥", fx: "flip" }, { t: "enemy", g: "🟥", fx: "mark" }, _, _, _, _, _, _], "🎯抽選成功でその先も味方化") },
+        { name: "会心（確率）", fam: "攻撃時", desc: "攻撃時、一定確率で攻撃力が大きく上昇します。発動率・上昇量ともにレベルで強化。発動時は抽選エフェクトが出ます。",
+          board: M([_, { t: "ally", g: "🟦", a: "→", fx: "mark" }, { t: "enemy", g: "🟥", fx: "flip" }, _, _, _, _, _, _], "🎯抽選成功で攻撃力UP") },
+        { name: "毒牙（pierce）", fam: "攻撃時", desc: "攻撃時、相手の防御力を一定割合だけ無視して攻撃します。レベルで無視率UP。",
+          board: M([_, { t: "ally", g: "🟦", a: "→", fx: "pulse" }, { t: "enemy", g: "🟥", fx: "flip" }, _, _, _, _, _, _], "相手の防御を貫通") },
+        { name: "加護（guard）", fam: "防御時", desc: "1回だけ、受けた攻撃を無効化します（ブロック）。",
+          board: M([_, { t: "enemy", g: "🟥", a: "→" }, { t: "ally", g: "🟦", fx: "pulse", g2: 1 }, _, _, _, _, _, _], "最初の攻撃を無効化") },
+        { name: "弱体の呪い（weaken）", fam: "登場時", desc: "登場時、隣接する敵カードの防御力を下げます。レベルで効果UP。倒しやすくなります。",
+          board: M([{ t: "enemy", g: "🟥", fx: "down" }, { t: "enemy", g: "🟥", fx: "down" }, _, { t: "enemy", g: "🟥", fx: "down" }, { t: "ally", g: "🟦", fx: "pulse" }, { t: "enemy", g: "🟥", fx: "down" }, _, _, _], "隣接敵の防御力ダウン") },
+        { name: "守護の陣（field_ally_def）", fam: "登場時", desc: "登場時、隣接する味方の防御力を上げます。レベルで効果UP。",
+          board: M([{ t: "ally", g: "🟦", fx: "pulse" }, { t: "ally", g: "🟦", fx: "pulse" }, _, { t: "ally", g: "🟦", fx: "pulse" }, { t: "ally", g: "🟦", fx: "mark" }, { t: "ally", g: "🟦", fx: "pulse" }, _, _, _], "隣接味方の防御力アップ") },
+        { name: "増殖の刻印（bonus_mark）", fam: "登場時", desc: "登場時、自分の攻撃マークがランダムに増えます。レベルで増加数UP。攻撃範囲が広がります。",
+          board: M([{ t: "empty", a: "↖" }, { t: "empty", a: "↑" }, { t: "empty", a: "↗" }, { t: "empty", a: "←" }, { t: "ally", g: "🟦", fx: "mark" }, { t: "empty", a: "→" }, _, { t: "empty", a: "↓" }, _], "攻撃マークが増える") },
+        { name: "急襲 / 構え / 返し突き", fam: "ステータス", desc: "急襲＝攻撃時に攻撃力UP、構え＝防御時に防御力UP、返し突き＝反撃時に攻撃力UP。いずれもレベルで上昇量が増えます。",
+          board: M([_, { t: "ally", g: "🟦", a: "→", fx: "mark" }, { t: "enemy", g: "🟥" }, _, _, _, _, _, _], "状況に応じてステータス上昇") },
+        { name: "リーダースキル", fam: "リーダー", desc: "デッキのリーダーに設定したカードのリーダースキルが、試合全体に作用します（例：デッキ全体の攻撃力UP、後攻になる確率UP、報酬・アイテム入手率UPなど）。レベルで効果UP。",
+          board: M([{ t: "ally", g: "👑", fx: "pulse" }, { t: "ally", g: "🟦", fx: "mark" }, { t: "ally", g: "🟦", fx: "mark" }, { t: "ally", g: "🟦", fx: "mark" }, _, _, _, _, _], "リーダーが味方全体を強化") },
+      ];
+      const groups = {};
+      docs.forEach((d) => { (groups[d.fam] = groups[d.fam] || []).push(d); });
+      $("skillsBody").innerHTML = Object.keys(groups).map((fam) =>
+        `<div class="quest-section"><h3>${fam}</h3>` +
+        groups[fam].map((d) =>
+          `<div class="skill-doc">
+            <div class="sd-board">${d.board}</div>
+            <div class="sd-text"><h4>${d.name}</h4><p>${d.desc}</p></div>
+          </div>`).join("") +
+        `</div>`).join("");
+    },
     renderRanking() {
       const rk = World.ranking(Store.state);
       const top = rk.rows.slice(0, 50);

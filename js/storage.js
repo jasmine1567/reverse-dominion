@@ -11,7 +11,8 @@
     defaultState() {
       return {
         player: null, coins: 1000, diamonds: 30,
-        owned: [],     // [{ uid, id, marks:[], level:1, exp:0, extraSkills:[skillId] }]
+        owned: [],     // [{ uid, id, marks:[], level:1, exp:0, extraSkills:[skillId], fav, seq }]
+        seqCounter: 0,
         items: {},     // { itemId: count }
         deck: [], savedDecks: [], leaderUid: null, dungeon: {}, dailyGacha: null,
         features: {},
@@ -39,9 +40,12 @@
         if (!inst.innateLv) inst.innateLv = 1;
         if (!inst.leaderLv) inst.leaderLv = 1;
         if (!inst.extraLv) inst.extraLv = {};
+        if (typeof inst.fav !== "boolean") inst.fav = false;
       });
       if (!("leaderUid" in this.state)) this.state.leaderUid = null;
       if (!("features" in this.state)) this.state.features = {};
+      if (typeof this.state.seqCounter !== "number") this.state.seqCounter = 0;
+      this.state.owned.forEach((inst) => { if (typeof inst.seq !== "number") inst.seq = ++this.state.seqCounter; });
       this.save();
       return this.state;
     },
@@ -81,6 +85,7 @@
         level: opts.level || 1, exp: opts.exp || 0,
         extraSkills: opts.extraSkills ? opts.extraSkills.slice() : [],
         innateLv: opts.innateLv || 1, leaderLv: opts.leaderLv || 1, extraLv: opts.extraLv ? { ...opts.extraLv } : {},
+        fav: false, seq: ++this.state.seqCounter,
       };
       this.state.owned.push(inst);
       this.save();
@@ -115,8 +120,19 @@
         baseAtk: base.baseAtk, baseDef: base.baseDef, marks, level,
         exp: inst.exp || 0, expNeed: isMax ? 0 : Data.expToNext(base.rarity, level),
         skill, extraSkills: extras, leaderSkill, leaderSkillId: base.leaderSkill, isMax,
+        fav: !!inst.fav, seq: inst.seq || 0,
       };
     },
+
+    /* ---- お気に入り ---- */
+    toggleFavInsts(uids, val) { uids.forEach((u) => { const i = this.getInstance(u); if (i) i.fav = (val === undefined ? !i.fav : !!val); }); this.save(); },
+    isFav(uid) { const i = this.getInstance(uid); return !!(i && i.fav); },
+    inAnyDeck(uid) {
+      if (this.state.deck.includes(uid)) return true;
+      return (this.state.savedDecks || []).some((p) => p.cards.includes(uid));
+    },
+    // 合成素材から除外したいカード（お気に入り or デッキ編成に含まれる）
+    isProtected(uid) { return this.isFav(uid) || this.inAnyDeck(uid); },
 
     /* ---- アイテム ---- */
     addItem(id, n = 1) { this.state.items[id] = (this.state.items[id] || 0) + n; this.save(); },

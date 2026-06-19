@@ -136,6 +136,23 @@
     },
     list(type) { return QUESTS.filter((x) => x.type === type); },
     claimable() { this.checkReset(); return QUESTS.filter((x) => this.isComplete(x) && !this.isClaimed(x.id)).length; },
+    claimAll() {
+      this.checkReset();
+      const total = { coins: 0, diamonds: 0, items: {} };
+      let count = 0;
+      QUESTS.forEach((x) => {
+        if (this.isComplete(x) && !this.isClaimed(x.id)) {
+          const r = this.claim(x.id);
+          if (r.ok) {
+            count++;
+            if (r.reward.coins) total.coins += r.reward.coins;
+            if (r.reward.diamonds) total.diamonds += r.reward.diamonds;
+            if (r.reward.items) for (const iid in r.reward.items) total.items[iid] = (total.items[iid] || 0) + r.reward.items[iid];
+          }
+        }
+      });
+      return { count, reward: total };
+    },
     rewardText(r) {
       const parts = [];
       if (r.coins) parts.push(`🪙${r.coins}`);

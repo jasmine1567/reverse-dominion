@@ -35,6 +35,11 @@
     const lv = skill.level || 1;
     return Math.round((skill.value || 0) * (1 + (lv - 1) * 0.5));
   }
+  // 確率発動スキルの発動率（レベルで上昇、最大95%）
+  function chanceVal(skill) {
+    const lv = skill.level || 1;
+    return Math.min(95, Math.round((skill.chance || 0) * (1 + (lv - 1) * 0.5)));
+  }
   // スキルLvL→L+1 に必要な「同じスキルカード」枚数 = L
   function skillUpCost(level) { return level; }
 
@@ -79,7 +84,7 @@
     DIRS, ALL_DIRS, OPPOSITE, RARITY_ORDER, RARITY_NEXT, SELL_VALUE, FUSE_UPGRADE_COUNT,
     MAX_LEVEL, EXTRA_SKILL_CAP, ITEMS, LEADER_SKILLS, MAX_SKILL_LEVEL,
     markCoef, levelMult, effAtk, effDef, levelUpCost, randomMarks,
-    expToNext, cardXp, skillVal, skillUpCost, leaderSkillById, leaderVal, leaderDesc,
+    expToNext, cardXp, skillVal, chanceVal, skillUpCost, leaderSkillById, leaderVal, leaderDesc,
     itemById(id) { return ITEM_BY_ID[id] || null; },
     cards: [], byId: {}, ready: false,
 

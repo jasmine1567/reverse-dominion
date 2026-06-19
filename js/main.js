@@ -149,6 +149,8 @@
     $("playerName").onclick = () => { if (Store.state.player) openRename(); };
     $("colRarity").onchange = () => UI.renderCollection();
     $("colSort").onchange = () => UI.renderCollection();
+    if ($("colSearch")) $("colSearch").oninput = () => UI.renderCollection();
+    if ($("colFav")) $("colFav").onclick = () => { UI.collFavOnly = !UI.collFavOnly; UI.renderCollection(); };
     $("battleQuit").onclick = () => Battle.quit();
     $("overlay").onclick = (e) => { if (e.target === $("overlay") && !$("overlay")._noClose) UI.closeModal(); };
   }
